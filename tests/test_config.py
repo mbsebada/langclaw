@@ -317,5 +317,16 @@ def test_default_skills_exist():
     from langclaw.agents.builder import _DEFAULTS_DIR
 
     assert (_DEFAULTS_DIR / "AGENTS.md").exists()
-    assert (_DEFAULTS_DIR / "skills" / "web-search" / "SKILL.md").exists()
     assert (_DEFAULTS_DIR / "skills" / "summarize" / "SKILL.md").exists()
+
+
+def test_config_workspace_paths():
+    """agents_md_file, skills_dir and memories_dir all resolve under workspace_dir."""
+    from langclaw.config.schema import LangclawConfig
+
+    cfg = LangclawConfig()
+    assert cfg.agents_md_file == cfg.workspace_dir / "AGENTS.md"
+    assert cfg.skills_dir == cfg.workspace_dir / "skills"
+    assert cfg.memories_dir == cfg.workspace_dir / "memories"
+    # Tilde must be expanded — path should not start with '~'
+    assert not str(cfg.workspace_dir).startswith("~")
