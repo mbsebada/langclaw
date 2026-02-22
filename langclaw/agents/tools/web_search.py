@@ -169,7 +169,7 @@ def _make_duckduckgo_tool() -> BaseTool:
 _BACKENDS = ("brave", "tavily", "duckduckgo")
 
 
-def make_search_tool(
+def make_web_search_tool(
     backend: str,
     *,
     api_key: str = "",

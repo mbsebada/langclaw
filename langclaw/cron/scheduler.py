@@ -8,6 +8,19 @@ it uses metadata["source"] == "cron" for any special handling.
 Persistence: APScheduler v4 jobs are held in-memory by default. For
 production persistence configure a SQLAlchemy data store (PostgreSQL, etc.)
 via APScheduler's built-in facilities.
+
+Serialisation note
+------------------
+When using a persistent data store (SQLAlchemy), APScheduler serialises the
+job function and its kwargs via pickle so they survive across restarts.
+Bound methods (``self._fire``) cannot be pickled when the instance holds
+un-picklable objects such as ``asyncio.Queue``.
+
+To work around this, the fire callback is a **module-level function**
+(``_fire_job``) that APScheduler serialises as a dotted import path.  The
+live bus reference is never pickled — instead each ``CronManager`` registers
+itself in a module-level ``_MANAGERS`` dict under a plain string ID, and
+``_fire_job`` looks the manager up at fire time.
 """
 
 from __future__ import annotations
@@ -19,6 +32,55 @@ from dataclasses import dataclass
 from langclaw.bus.base import BaseMessageBus, InboundMessage
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Module-level manager registry
+# ---------------------------------------------------------------------------
+
+# Maps manager_id → CronManager so that the module-level _fire_job function
+# can reach the live bus without holding an un-picklable reference.
+_MANAGERS: dict[str, CronManager] = {}
+
+
+# ---------------------------------------------------------------------------
+# Module-level fire callback (picklable by APScheduler)
+# ---------------------------------------------------------------------------
+
+
+async def _fire_job(
+    manager_id: str,
+    message: str,
+    channel: str,
+    user_id: str,
+    context_id: str,
+    job_name: str,
+) -> None:
+    """APScheduler job function — must stay at module level to be picklable.
+
+    All parameters are plain strings so APScheduler can pickle them safely
+    regardless of which data store backend is configured.
+    """
+    manager = _MANAGERS.get(manager_id)
+    if manager is None:
+        logger.error(
+            f"CronManager '{manager_id}' not found in registry "
+            f"— dropping fired job '{job_name}'."
+        )
+        return
+    logger.debug(f"Cron job '{job_name}' fired → publishing to bus.")
+    await manager._bus.publish(
+        InboundMessage(
+            channel=channel,
+            user_id=user_id,
+            context_id=context_id,
+            content=message,
+            metadata={
+                "source": "cron",
+                "job_name": job_name,
+            },
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -48,22 +110,39 @@ class CronManager:
     Manages scheduled jobs that trigger agent invocations.
 
     Natural-language scheduling is handled by the agent itself via the
-    ``schedule_task`` tool — the LLM parses "every morning at 9" and calls
+    ``cron`` tool — the LLM parses "every morning at 9" and calls
     this manager with the resulting cron expression.
 
     Args:
-        bus:      MessageBus to publish triggered messages into.
-        timezone: Default timezone for cron expressions (e.g. ``"Europe/Amsterdam"``).
+        bus:          MessageBus to publish triggered messages into.
+        timezone:     Default timezone for cron expressions
+                      (e.g. ``"Europe/Amsterdam"``).
+        data_store:   APScheduler ``DataStore`` instance. Defaults to
+                      ``MemoryDataStore`` (in-process, lost on restart).
+                      Pass a ``SQLAlchemyDataStore`` for persistence.
+        event_broker: APScheduler ``EventBroker`` instance. Defaults to
+                      ``LocalEventBroker`` (single-process). Pass an
+                      ``AsyncpgEventBroker``, ``PsycopgEventBroker``, or
+                      ``RedisEventBroker`` for multi-process coordination.
     """
 
-    def __init__(self, bus: BaseMessageBus, timezone: str = "UTC") -> None:
+    def __init__(
+        self,
+        bus: BaseMessageBus,
+        timezone: str = "UTC",
+        data_store: object | None = None,
+        event_broker: object | None = None,
+    ) -> None:
         self._bus = bus
         self._timezone = timezone
+        self._data_store = data_store
+        self._event_broker = event_broker
+        self._manager_id: str = str(uuid.uuid4())
         self._scheduler: object = None  # APScheduler AsyncScheduler
         self._jobs: dict[str, CronJob] = {}
 
     async def start(self) -> None:
-        """Start the APScheduler AsyncScheduler."""
+        """Start the APScheduler AsyncScheduler and register in the registry."""
         try:
             from apscheduler import AsyncScheduler
             from apscheduler.datastores.memory import MemoryDataStore
@@ -75,13 +154,19 @@ class CronManager:
             ) from exc
 
         self._scheduler = AsyncScheduler(
-            data_store=MemoryDataStore(),
-            event_broker=LocalEventBroker(),
+            data_store=self._data_store or MemoryDataStore(),
+            event_broker=self._event_broker or LocalEventBroker(),
         )
         await self._scheduler.__aenter__()
-        logger.info(f"CronManager started (timezone={self._timezone}).")
+        _MANAGERS[self._manager_id] = self
+        logger.info(
+            f"CronManager started "
+            f"(id={self._manager_id}, timezone={self._timezone})."
+        )
 
     async def stop(self) -> None:
+        """Stop the scheduler and deregister from the registry."""
+        _MANAGERS.pop(self._manager_id, None)
         if self._scheduler is not None:
             await self._scheduler.__aexit__(None, None, None)
             self._scheduler = None
@@ -138,13 +223,15 @@ class CronManager:
             context_id=context_id,
             schedule=cron_expr or f"every:{every_seconds}s",
         )
-        self._jobs[job_id] = job
-
+        # All kwargs are plain strings — safe to pickle for persistent stores.
+        # The bus is looked up from _MANAGERS at fire time via manager_id.
+        # Register in _jobs *after* add_schedule succeeds to avoid orphans.
         await self._scheduler.add_schedule(
-            self._fire,
+            _fire_job,
             trigger,
             id=job_id,
             kwargs={
+                "manager_id": self._manager_id,
                 "message": message,
                 "channel": channel,
                 "user_id": user_id,
@@ -152,14 +239,34 @@ class CronManager:
                 "job_name": name,
             },
         )
+        self._jobs[job_id] = job
         logger.info(
-            f"Cron job '{name}' scheduled (id={job_id}, schedule={job.schedule})."
+            f"Cron job '{name}' scheduled "
+            f"(id={job_id}, schedule={job.schedule})."
         )
         return job_id
 
-    async def remove_job(self, job_id: str) -> bool:
-        """Remove a scheduled job. Returns True if it existed."""
+    async def remove_job(
+        self,
+        job_id: str,
+        *,
+        channel: str | None = None,
+        user_id: str | None = None,
+    ) -> bool:
+        """Remove a scheduled job. Returns True if it existed.
+
+        When *channel* and *user_id* are provided, the job is only removed
+        if it belongs to that owner. This prevents users from deleting
+        jobs created by others.
+        """
         if self._scheduler is None:
+            return False
+        job = self._jobs.get(job_id)
+        if job is None:
+            return False
+        if channel is not None and job.channel != channel:
+            return False
+        if user_id is not None and job.user_id != user_id:
             return False
         try:
             await self._scheduler.remove_schedule(job_id)
@@ -168,32 +275,21 @@ class CronManager:
         except Exception:
             return False
 
-    def list_jobs(self) -> list[CronJob]:
-        """Return all registered cron jobs."""
-        return list(self._jobs.values())
-
-    # ------------------------------------------------------------------
-    # Internal fire callback
-    # ------------------------------------------------------------------
-
-    async def _fire(
+    def list_jobs(
         self,
-        message: str,
-        channel: str,
-        user_id: str,
-        context_id: str,
-        job_name: str,
-    ) -> None:
-        logger.debug(f"Cron job '{job_name}' fired → publishing to bus.")
-        await self._bus.publish(
-            InboundMessage(
-                channel=channel,
-                user_id=user_id,
-                context_id=context_id,
-                content=message,
-                metadata={
-                    "source": "cron",
-                    "job_name": job_name,
-                },
-            )
-        )
+        *,
+        channel: str | None = None,
+        user_id: str | None = None,
+    ) -> list[CronJob]:
+        """Return registered cron jobs, optionally filtered by owner.
+
+        When *channel* and *user_id* are both provided, only jobs matching
+        that owner are returned — preventing users from seeing jobs
+        scheduled by others.
+        """
+        jobs = self._jobs.values()
+        if channel is not None:
+            jobs = [j for j in jobs if j.channel == channel]
+        if user_id is not None:
+            jobs = [j for j in jobs if j.user_id == user_id]
+        return list(jobs)

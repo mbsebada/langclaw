@@ -173,7 +173,7 @@ class AgentConfig(BaseModel):
 
 
 class SqliteCheckpointerConfig(BaseModel):
-    db_path: str = "~/.langclaw/state.db"
+    db_path: str = Field(default_factory=lambda: str(_LANGCLAW_HOME / "state.db"))
 
 
 class PostgresCheckpointerConfig(BaseModel):
@@ -211,9 +211,74 @@ class BusConfig(BaseModel):
     kafka: KafkaBusConfig = Field(default_factory=KafkaBusConfig)
 
 
+class CronSQLiteDataStoreConfig(BaseModel):
+    db_path: str = Field(default_factory=lambda: str(_LANGCLAW_HOME / "cron.db"))
+
+
+class CronPostgresDataStoreConfig(BaseModel):
+    dsn: str = ""
+    """SQLAlchemy async DSN, e.g.
+    ``postgresql+asyncpg://user:pass@host/db``."""
+
+
+class CronDataStoreConfig(BaseModel):
+    """APScheduler data store — controls where job schedules are persisted.
+
+    - ``"memory"``   — in-process only, lost on restart (default).
+    - ``"sqlite"``   — persistent local file via SQLAlchemy + aiosqlite.
+    - ``"postgres"`` — persistent shared DB via SQLAlchemy + asyncpg.
+    """
+
+    backend: Literal["memory", "sqlite", "postgres"] = "sqlite"
+    sqlite: CronSQLiteDataStoreConfig = Field(default_factory=CronSQLiteDataStoreConfig)
+    postgres: CronPostgresDataStoreConfig = Field(
+        default_factory=CronPostgresDataStoreConfig
+    )
+
+
+class CronAsyncpgEventBrokerConfig(BaseModel):
+    dsn: str = ""
+    """asyncpg connection DSN, e.g.
+    ``postgresql+asyncpg://user:pass@host/db``."""
+
+
+class CronPsycopgEventBrokerConfig(BaseModel):
+    dsn: str = ""
+    """psycopg3 connection DSN, e.g.
+    ``postgresql+psycopg://user:pass@host/db``."""
+
+
+class CronRedisEventBrokerConfig(BaseModel):
+    host: str = "localhost"
+    port: int = 6379
+
+
+class CronEventBrokerConfig(BaseModel):
+    """APScheduler event broker — controls how scheduler events are fanned out.
+
+    - ``"local"``   — in-process only, single-instance (default).
+    - ``"asyncpg"`` — PostgreSQL pub/sub via asyncpg (multi-process).
+    - ``"psycopg"`` — PostgreSQL pub/sub via psycopg3 (multi-process).
+    - ``"redis"``   — Redis pub/sub (multi-process).
+    """
+
+    backend: Literal["local", "asyncpg", "psycopg", "redis"] = "local"
+    asyncpg: CronAsyncpgEventBrokerConfig = Field(
+        default_factory=CronAsyncpgEventBrokerConfig
+    )
+    psycopg: CronPsycopgEventBrokerConfig = Field(
+        default_factory=CronPsycopgEventBrokerConfig
+    )
+    redis: CronRedisEventBrokerConfig = Field(
+        default_factory=CronRedisEventBrokerConfig
+    )
+
+
 class CronConfig(BaseModel):
     enabled: bool = True
     timezone: str = "UTC"
+    data_store: CronDataStoreConfig = Field(default_factory=CronDataStoreConfig)
+    event_broker: CronEventBrokerConfig = Field(default_factory=CronEventBrokerConfig)
 
 
 class HeartbeatConfig(BaseModel):

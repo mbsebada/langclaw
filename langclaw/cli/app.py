@@ -261,17 +261,30 @@ async def _gateway_async() -> None:
         raise typer.Exit(1)
 
     async with bus, checkpointer_backend:
-        agent = create_claw_agent(config, checkpointer=checkpointer_backend.get())
+        cron_manager = None
+        if config.cron.enabled:
+            from langclaw.cron import make_cron_manager
+
+            cron_manager = make_cron_manager(bus=bus, config=config.cron)
+
+        agent = create_claw_agent(
+            config,
+            checkpointer=checkpointer_backend.get(),
+            cron_manager=cron_manager,
+        )
         manager = GatewayManager(
             config=config,
             bus=bus,
             checkpointer_backend=checkpointer_backend,
             agent=agent,
             channels=channels,
+            cron_manager=cron_manager,
         )
+        cron_status = "enabled" if cron_manager else "disabled"
         typer.echo(
             f"Gateway starting — channels: {[ch.name for ch in channels]}, "
-            f"bus: {bus_cfg.backend}, checkpointer: {cp_cfg.backend}"
+            f"bus: {bus_cfg.backend}, "
+            f"checkpointer: {cp_cfg.backend}, cron: {cron_status}"
         )
         await manager.run()
 

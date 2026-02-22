@@ -20,6 +20,7 @@ from loguru import logger
 from langclaw.bus.base import BaseMessageBus, InboundMessage, OutboundMessage
 from langclaw.checkpointer.base import BaseCheckpointerBackend
 from langclaw.config.schema import LangclawConfig
+from langclaw.cron.scheduler import CronManager
 from langclaw.gateway.base import BaseChannel
 from langclaw.session.manager import SessionManager
 
@@ -30,15 +31,20 @@ class GatewayManager:
 
     Responsibilities:
     - Start/stop all registered channels (via asyncio.TaskGroup)
+    - Start/stop the CronManager alongside channels when provided
     - Run the bus worker that feeds messages to the agent
     - Handle per-message agent streaming back to the originating channel
 
     Args:
-        config:      Loaded LangclawConfig.
-        bus:         Initialised BaseMessageBus.
+        config:               Loaded LangclawConfig.
+        bus:                  Initialised BaseMessageBus.
         checkpointer_backend: Initialised BaseCheckpointerBackend (in context).
-        agent:       Compiled LangGraph agent (from create_claw_agent).
-        channels:    List of BaseChannel implementations to manage.
+        agent:                Compiled LangGraph agent (from create_claw_agent).
+        channels:             List of BaseChannel implementations to manage.
+        cron_manager:         Optional ``CronManager`` to start/stop with the
+                              gateway. When provided, scheduled jobs publish
+                              ``InboundMessage``s to the bus and flow through
+                              the same agent pipeline as channel messages.
     """
 
     def __init__(
@@ -48,12 +54,14 @@ class GatewayManager:
         checkpointer_backend: BaseCheckpointerBackend,
         agent: CompiledStateGraph,
         channels: list[BaseChannel],
+        cron_manager: CronManager | None = None,
     ) -> None:
         self._config = config
         self._bus = bus
         self._checkpointer_backend = checkpointer_backend
         self._agent = agent
         self._channels = [ch for ch in channels if ch.is_enabled()]
+        self._cron_manager = cron_manager
         self._sessions = SessionManager()
         self._channel_map: dict[str, BaseChannel] = {
             ch.name: ch for ch in self._channels
@@ -61,12 +69,21 @@ class GatewayManager:
 
     async def run(self) -> None:
         """
-        Start all channels and the bus worker.
+        Start all channels, the bus worker, and (optionally) the cron scheduler.
 
         Uses Python 3.11+ ``asyncio.TaskGroup`` for structured concurrency:
         if any channel task raises an unhandled exception the group cancels
         all sibling tasks, preventing zombie processes.
+
+        The ``CronManager`` is started before the TaskGroup and stopped in a
+        ``finally`` block so scheduled jobs are always cleaned up on exit.
+        APScheduler manages its own internal async loop once started, so it
+        does not need its own sibling task.
         """
+        if self._cron_manager is not None:
+            await self._cron_manager.start()
+            logger.info("CronManager started.")
+
         try:
             async with asyncio.TaskGroup() as tg:
                 for channel in self._channels:
@@ -79,6 +96,10 @@ class GatewayManager:
             for exc in eg.exceptions:
                 logger.error(f"Gateway task failed: {exc}")
             raise
+        finally:
+            if self._cron_manager is not None:
+                await self._cron_manager.stop()
+                logger.info("CronManager stopped.")
 
     async def _run_channel(self, channel: BaseChannel) -> None:
         """Start a single channel, stopping it cleanly on cancellation."""

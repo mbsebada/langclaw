@@ -15,7 +15,7 @@ from langchain_core.language_models import BaseChatModel
 from langgraph.graph.state import CompiledStateGraph
 
 from langclaw.agents.prompts.memory import MEMORY_SYSTEM_PROMPT
-from langclaw.agents.tools import build_web_tools
+from langclaw.agents.tools import build_cron_tools, build_web_tools
 from langclaw.config.schema import LangclawConfig
 from langclaw.middleware.channel_context import ChannelContextMiddleware
 from langclaw.middleware.guardrails import ContentFilterMiddleware, PIIMiddleware
@@ -27,6 +27,8 @@ if TYPE_CHECKING:
     from langchain.agents.middleware import AgentMiddleware
     from langchain_core.tools import BaseTool
     from langgraph.types import Checkpointer
+
+    from langclaw.cron.scheduler import CronManager
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -45,6 +47,7 @@ def create_claw_agent(
     config: LangclawConfig,
     *,
     checkpointer: Checkpointer | None = None,
+    cron_manager: CronManager | None = None,
     extra_tools: list[BaseTool | Any] | None = None,
     extra_skills: list[str] | None = None,
     extra_middleware: list[AgentMiddleware] | None = None,
@@ -62,6 +65,10 @@ def create_claw_agent(
         checkpointer:     LangGraph ``BaseCheckpointSaver`` for persisting
                           conversation state across turns. Without this the
                           agent starts fresh on every message.
+        cron_manager:     Running ``CronManager`` instance. When provided and
+                          ``config.cron.enabled`` is ``True``, the ``cron``
+                          tool is added as a default tool so the agent can
+                          schedule, list, and remove recurring jobs.
         extra_tools:      Additional LangChain tools beyond the defaults.
         extra_skills:     Paths to directories containing ``SKILL.md`` files.
         extra_middleware: Additional ``AgentMiddleware`` instances inserted
@@ -90,6 +97,8 @@ def create_claw_agent(
 
     tools: list[Any] = list(extra_tools or [])
     tools += build_web_tools(config)
+    if cron_manager is not None:
+        tools += build_cron_tools(config, cron_manager)
 
     agents_md = config.agents.agents_md_file.read_text("utf-8")
     system_prompt = f"""{agents_md}\n\n{MEMORY_SYSTEM_PROMPT}"""
