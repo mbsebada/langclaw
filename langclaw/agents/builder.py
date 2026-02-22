@@ -14,12 +14,14 @@ from typing import TYPE_CHECKING, Any
 from langchain_core.language_models import BaseChatModel
 from langgraph.graph.state import CompiledStateGraph
 
+from langclaw.agents.prompts.memory import MEMORY_SYSTEM_PROMPT
+from langclaw.agents.tools import build_web_tools
 from langclaw.config.schema import LangclawConfig
 from langclaw.middleware.channel_context import ChannelContextMiddleware
 from langclaw.middleware.guardrails import ContentFilterMiddleware, PIIMiddleware
 from langclaw.middleware.rate_limit import RateLimitMiddleware
 from langclaw.providers.registry import provider_registry
-from langclaw.tools.memory import MEMORY_SYSTEM_PROMPT, MemoryTool
+from langclaw.utils import to_virtual_path  # for extra_skills conversion
 
 if TYPE_CHECKING:
     from langchain.agents.middleware import AgentMiddleware
@@ -82,17 +84,15 @@ def create_claw_agent(
         config.agents.model, config.providers
     )
 
-    skills = [str(config.skills_dir)] + list(extra_skills or [])
+    skills = [config.agents.skills_source] + [
+        to_virtual_path(s, config.agents.workspace_dir) for s in (extra_skills or [])
+    ]
 
-    # Loaded by deepagents at startup and injected into the system prompt.
-    # Only included if the user has already run `langclaw init`.
-    memory = [str(config.agents_md_file)] if config.agents_md_file.exists() else []
+    tools: list[Any] = list(extra_tools or [])
+    tools += build_web_tools(config)
 
-    # Ensure the memories directory exists before the tool tries to use it
-    config.memories_dir.mkdir(parents=True, exist_ok=True)
-
-    memory_tool = MemoryTool(memories_dir=config.memories_dir)
-    tools: list[Any] = [memory_tool, *list(extra_tools or [])]
+    agents_md = config.agents.agents_md_file.read_text("utf-8")
+    system_prompt = f"""{agents_md}\n\n{MEMORY_SYSTEM_PROMPT}"""
 
     # Built-in middleware stack (order matters):
     #   1. ChannelContextMiddleware  — inject channel metadata first
@@ -118,11 +118,10 @@ def create_claw_agent(
         model=resolved_model,
         tools=tools,
         skills=skills,
-        memory=memory,
-        system_prompt=MEMORY_SYSTEM_PROMPT,
+        system_prompt=system_prompt,
         checkpointer=checkpointer,
         backend=FilesystemBackend(
-            root_dir=str(config.workspace_dir), virtual_mode=True
+            root_dir=str(config.agents.workspace_dir), virtual_mode=True
         ),
         middleware=middleware,
     )
