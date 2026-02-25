@@ -129,10 +129,18 @@ class SlackChannelConfig(BaseModel):
     allow_from: StringList = Field(default_factory=list)
 
 
+class WebSocketChannelConfig(BaseModel):
+    enabled: bool = False
+    host: str = "127.0.0.1"
+    port: int = 18789
+    allow_from: StringList = Field(default_factory=list)
+
+
 class ChannelsConfig(BaseModel):
     telegram: TelegramChannelConfig = Field(default_factory=TelegramChannelConfig)
     discord: DiscordChannelConfig = Field(default_factory=DiscordChannelConfig)
     slack: SlackChannelConfig = Field(default_factory=SlackChannelConfig)
+    websocket: WebSocketChannelConfig = Field(default_factory=WebSocketChannelConfig)
 
 
 class AgentConfig(BaseModel):
@@ -286,6 +294,26 @@ class HeartbeatConfig(BaseModel):
     interval_seconds: int = 60
 
 
+class GmailConfig(BaseModel):
+    """Gmail tool configuration (OAuth 2.0 Desktop flow)."""
+
+    enabled: bool = False
+    """Enable Gmail tools. Requires ``client_id`` and ``client_secret``."""
+
+    client_id: str = ""
+    """OAuth 2.0 client ID from the Google Cloud Console."""
+
+    client_secret: str = ""
+    """OAuth 2.0 client secret from the Google Cloud Console."""
+
+    token_path: str = Field(default_factory=lambda: str(_LANGCLAW_HOME / "gmail_token.json"))
+    """Path to the persisted OAuth refresh/access token file."""
+
+    readonly: bool = True
+    """When ``True`` only read/search tools are registered;
+    when ``False`` send, draft, reply, and label tools are added as well."""
+
+
 class ToolsConfig(BaseModel):
     """Configuration for built-in agent tools (web search, fetch, etc.)."""
 
@@ -299,6 +327,9 @@ class ToolsConfig(BaseModel):
     tavily_api_key: str = ""
     """Tavily Search API key. Required when search_backend = "tavily".
     Obtain one at https://app.tavily.com"""
+
+    gmail: GmailConfig = Field(default_factory=GmailConfig)
+    """Gmail tool configuration. See ``GmailConfig``."""
 
 
 # ---------------------------------------------------------------------------

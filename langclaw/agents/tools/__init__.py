@@ -48,6 +48,41 @@ def build_web_tools(config: LangclawConfig) -> list[Any]:
     return tools
 
 
+def build_gmail_tools(config: LangclawConfig) -> list[Any]:
+    """Return Gmail tools enabled by the current config.
+
+    When ``config.tools.gmail.readonly`` is ``True`` only ``read_email`` and
+    ``search_emails`` are returned.  When ``False`` the full suite (send,
+    draft, reply, manage_labels) is included as well.
+
+    Returns an empty list when Gmail is disabled or credentials are missing.
+    """
+    gmail = config.tools.gmail
+    if not gmail.enabled or not gmail.client_id:
+        return []
+
+    from langclaw.agents.tools.gmail import (
+        make_draft_email_tool,
+        make_manage_labels_tool,
+        make_read_email_tool,
+        make_reply_email_tool,
+        make_search_emails_tool,
+        make_send_email_tool,
+    )
+
+    if gmail.readonly:
+        return [make_read_email_tool(gmail), make_search_emails_tool(gmail)]
+
+    return [
+        make_read_email_tool(gmail),
+        make_search_emails_tool(gmail),
+        make_send_email_tool(gmail),
+        make_draft_email_tool(gmail),
+        make_reply_email_tool(gmail),
+        make_manage_labels_tool(gmail),
+    ]
+
+
 def build_cron_tools(config: LangclawConfig, cron_manager: CronManager) -> list[Any]:
     """Return the cron tool when ``config.cron.enabled`` is ``True``.
 
@@ -67,4 +102,10 @@ def build_cron_tools(config: LangclawConfig, cron_manager: CronManager) -> list[
     return [make_cron_tool(cron_manager, timezone=config.cron.timezone)]
 
 
-__all__ = ["build_cron_tools", "build_web_tools", "make_web_search_tool", "web_fetch"]
+__all__ = [
+    "build_cron_tools",
+    "build_gmail_tools",
+    "build_web_tools",
+    "make_web_search_tool",
+    "web_fetch",
+]

@@ -107,7 +107,9 @@ class DiscordChannel(BaseChannel):
             await self._handle_slash(interaction, "reset")
 
         @tree.command(name="cron", description="List or remove cron jobs")
-        @discord.app_commands.describe(action="list or remove", job_id="Job ID (for remove)")
+        @discord.app_commands.describe(
+            action="list or remove", job_id="Job ID (for remove)"
+        )
         async def slash_cron(
             interaction: discord.Interaction,
             action: str = "list",
@@ -142,7 +144,33 @@ class DiscordChannel(BaseChannel):
             )
             if message.author.bot:
                 return
+
+            is_dm = isinstance(message.channel, discord.DMChannel)
+            mentioned = client.user in message.mentions if client.user else False
+            if not is_dm and not mentioned:
+                return
+
+            if mentioned and client.user:
+                message.content = message.content.replace(
+                    f"<@{client.user.id}>", ""
+                ).strip()
+
             await self._on_message(message)
+
+        @client.event
+        async def on_message_edit(
+            _before: discord.Message, after: discord.Message
+        ) -> None:
+            if after.author.bot:
+                return
+            mentioned = client.user in after.mentions if client.user else False
+            if not mentioned:
+                return
+            if client.user:
+                after.content = after.content.replace(
+                    f"<@{client.user.id}>", ""
+                ).strip()
+            await self._on_message(after)
 
         logger.info("DiscordChannel starting…")
         await client.start(self._config.token)
@@ -445,7 +473,8 @@ class DiscordChannel(BaseChannel):
         """Bridge a Discord slash-command interaction to the CommandRouter."""
         if self._command_router is None:
             await interaction.response.send_message(
-                f"Command /{cmd} is not available.", ephemeral=True,
+                f"Command /{cmd} is not available.",
+                ephemeral=True,
             )
             return
 

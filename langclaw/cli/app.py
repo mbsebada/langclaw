@@ -315,6 +315,18 @@ def _build_channels(config) -> list:
                 "Run: uv add 'langclaw[discord]'",
                 err=True,
             )
+    # WebSocket
+    if config.channels.websocket.enabled:
+        try:
+            from langclaw.gateway.websocket import WebSocketChannel
+
+            channels.append(WebSocketChannel(config.channels.websocket))
+        except ImportError:
+            typer.echo(
+                "WebSocket enabled but websockets not installed. "
+                "Run: uv add 'langclaw[websocket]'",
+                err=True,
+            )
     return channels
 
 
@@ -460,6 +472,7 @@ def status() -> None:
         ("telegram", ch.telegram.enabled),
         ("discord", ch.discord.enabled),
         ("slack", ch.slack.enabled),
+        ("websocket", ch.websocket.enabled),
     ]
     for name, enabled in channel_states:
         mark = "✓" if enabled else "✗"

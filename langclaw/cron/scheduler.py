@@ -85,6 +85,12 @@ async def _fire_job(
     field continue to fire without error.
     """
     manager = _MANAGERS.get(manager_id)
+    if manager is None and _MANAGERS:
+        fallback_id, manager = next(iter(_MANAGERS.items()))
+        logger.warning(
+            f"CronManager '{manager_id}' not in registry "
+            f"(stale persisted job?); falling back to '{fallback_id}'."
+        )
     if manager is None:
         logger.error(
             f"CronManager '{manager_id}' not found in registry "
