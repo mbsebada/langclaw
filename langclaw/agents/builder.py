@@ -141,7 +141,7 @@ def create_claw_agent(
         ]
     )
 
-    context_schema = LangclawContext if config.permissions.enabled else None
+    context_schema = LangclawContext
 
     return create_deep_agent(
         model=resolved_model,

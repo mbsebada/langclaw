@@ -22,14 +22,14 @@ class ChannelContextMiddleware(AgentMiddleware):
     """
 
     def before_agent(self, state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
-        # Metadata flows in through the RunnableConfig configurable dict.
-        # Channels set: config["configurable"]["channel_context"] = {...}
-        config = runtime.config if hasattr(runtime, "config") else {}
-        configurable = config.get("configurable", {}) if isinstance(config, dict) else {}
-        channel_ctx = configurable.get("channel_context", {})
-
-        if not channel_ctx:
+        ctx = getattr(runtime, "context", None)
+        if ctx is None:
             return None
 
-        # Surface metadata into the top-level state so tools/prompts can read it.
-        return {"channel_context": channel_ctx}
+        return {"channel_context": {
+            "channel": ctx.channel,
+            "user_id": ctx.user_id,
+            "context_id": ctx.context_id,
+            "chat_id": ctx.chat_id,
+            "metadata": ctx.metadata,
+        }}

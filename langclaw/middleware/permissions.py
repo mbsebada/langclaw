@@ -32,9 +32,18 @@ if TYPE_CHECKING:
 
 @dataclass
 class LangclawContext:
-    """Runtime context schema for ``create_agent``."""
+    """Runtime context schema passed to every agent invocation.
+
+    Centralises channel metadata and RBAC role so middleware, tools,
+    and user code can all read ``runtime.context`` uniformly.
+    """
 
     user_role: str = field(default="viewer")
+    channel: str = ""
+    user_id: str = ""
+    context_id: str = ""
+    chat_id: str = ""
+    metadata: dict = field(default_factory=dict)
 
 
 def build_tool_permission_middleware(

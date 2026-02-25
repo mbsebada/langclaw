@@ -1,19 +1,20 @@
 """Cron tool — allows the agent to schedule, list, and remove recurring jobs.
 
-The tool reads channel context (channel, user_id, context_id) from the
-``RunnableConfig`` injected by ``ChannelContextMiddleware``, so jobs are
-automatically routed back to the conversation that created them.
+The tool reads channel context (channel, user_id, context_id) from
+``runtime.context`` (a ``LangclawContext`` instance injected by the gateway),
+so jobs are automatically routed back to the conversation that created them.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Literal
+from typing import TYPE_CHECKING, Literal
 
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import BaseTool, InjectedToolArg, tool
+from langchain.tools import ToolRuntime
+from langchain_core.tools import BaseTool, tool
 from loguru import logger
 
 from langclaw.cron.utils import make_cron_context_id
+from langclaw.middleware.permissions import LangclawContext
 
 if TYPE_CHECKING:
     from langclaw.cron.scheduler import CronManager
@@ -107,9 +108,9 @@ def make_cron_tool(cron_manager: CronManager, timezone: str = "UTC") -> BaseTool
     actions — ``add``, ``list``, and ``remove`` — so the LLM can manage
     scheduled jobs through natural language.
 
-    Channel context (channel name, user_id, context_id) is read from the
-    injected ``RunnableConfig`` rather than mutated state, keeping the tool
-    stateless and thread-safe.
+    Channel context (channel name, user_id, context_id) is read from
+    ``runtime.context`` (a ``LangclawContext``), keeping the tool stateless
+    and thread-safe.
 
     The ``timezone`` is embedded into the tool's schema description so the
     LLM always knows which timezone to use when constructing cron expressions.
@@ -132,15 +133,13 @@ def make_cron_tool(cron_manager: CronManager, timezone: str = "UTC") -> BaseTool
         cron_expr: str | None = None,
         job_id: str | None = None,
         *,
-        config: Annotated[RunnableConfig, InjectedToolArg],
+        runtime: ToolRuntime[LangclawContext],
     ) -> str:
-        # ── Resolve channel context from RunnableConfig ────────────────────
-        configurable = (config or {}).get("configurable", {})
-        ctx = configurable.get("channel_context", {})
-        channel = ctx.get("channel", "")
-        user_id = ctx.get("user_id", "")
-        context_id = ctx.get("context_id", "default")
-        chat_id = ctx.get("chat_id", user_id)
+        ctx = runtime.context
+        channel = ctx.channel if ctx else ""
+        user_id = ctx.user_id if ctx else ""
+        context_id = ctx.context_id if ctx else "default"
+        chat_id = ctx.chat_id if ctx else user_id
 
         # ── add ────────────────────────────────────────────────────────────
         if action == "add":

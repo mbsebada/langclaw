@@ -42,7 +42,8 @@ class RateLimitMiddleware(AgentMiddleware):
 
     @hook_config(can_jump_to=["end"])
     def before_agent(self, state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
-        user_id = self._get_user_id(state)
+        ctx = getattr(runtime, "context", None)
+        user_id = ctx.user_id if ctx else None
         if not user_id:
             return None
 
@@ -70,7 +71,3 @@ class RateLimitMiddleware(AgentMiddleware):
             "jump_to": "end",
         }
 
-    @staticmethod
-    def _get_user_id(state: AgentState) -> str | None:
-        ctx = state.get("channel_context") or {}
-        return ctx.get("user_id")

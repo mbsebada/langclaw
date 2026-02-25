@@ -301,10 +301,15 @@ class GatewayManager:
             channel_context=channel_context,
         )
 
-        user_role = self._resolve_user_role(msg)
-        context: LangclawContext | None = None
-        if user_role is not None:
-            context = LangclawContext(user_role=user_role)
+        user_role = self._resolve_user_role(msg) or "viewer"
+        context = LangclawContext(
+            user_role=user_role,
+            channel=msg.channel,
+            user_id=msg.user_id,
+            context_id=msg.context_id,
+            chat_id=msg.chat_id,
+            metadata=msg.metadata or {},
+        )
 
         input_state = {
             "messages": [HumanMessage(content=msg.content)],
@@ -315,9 +320,8 @@ class GatewayManager:
                 "config": runnable_config,
                 "stream_mode": "updates",
                 "print_mode": "updates",
+                "context": context,
             }
-            if context is not None:
-                stream_kwargs["context"] = context
 
             async for chunk in self._agent.astream(
                 input_state,
