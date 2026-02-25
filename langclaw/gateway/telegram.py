@@ -201,14 +201,13 @@ class TelegramChannel(BaseChannel):
         try:
             from telegram import BotCommand
 
-            await app.bot.set_my_commands(
-                [
-                    BotCommand("start", "Start the bot"),
-                    BotCommand("help", "Show available commands"),
-                    BotCommand("reset", "Start a fresh conversation"),
-                    BotCommand("cron", "List or remove cron jobs"),
-                ]
-            )
+            bot_commands = [
+                BotCommand(entry.name, entry.description or entry.name)
+                for entry in (self._command_router.list_commands()
+                              if self._command_router else [])
+            ]
+            if bot_commands:
+                await app.bot.set_my_commands(bot_commands)
         except Exception as e:
             logger.warning(f"Failed to register bot commands: {e}")
 
