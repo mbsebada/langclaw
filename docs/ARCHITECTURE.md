@@ -1,6 +1,6 @@
-# Langclaw Architecture & Roadmap
+# Langclaw Architecture
 
-This document details the core design principles, architectural decisions, and future roadmap of the Langclaw framework. For high-level diagrams, package structures, and data flow, please refer to the [README](../README.md).
+This document details the core design principles and architectural decisions of the Langclaw framework. For high-level diagrams, package structures, and data flow, please refer to the [README](../README.md).
 
 ## Design Vision: A Framework, Not an App
 
@@ -42,28 +42,3 @@ Understanding where Langclaw sits in the ecosystem helps clarify its architectur
 
 ### Langclaw's Position
 Langclaw aims to be a robust production-ready framework (thanks to the LangChain/LangGraph ecosystem) that is simpler and more explicit in Python than OpenClaw.
-
-
-
-## Roadmap
-
-The framework is evolving in phases to reach full maturity.
-
-### Phase 1: The App Class & Explicit Registration (✅ Completed)
-- Created `Langclaw` as the central application object.
-- Replaced hardcoded tool loading with explicit `@app.tool()` and `register_tools()`.
-- Added lifecycle hooks (`@app.on_startup`, `@app.on_shutdown`).
-
-### Phase 2: Kill the Global Config Singleton (✅ Completed)
-- Removed the module-level `config: LangclawConfig = load_config()` singleton from `langclaw.config.schema`.
-- Configuration now flows exclusively through the `Langclaw` app object or via explicit `load_config()` calls.
-- The CLI loads config lazily inside each command, enabling multiple distinct `Langclaw` instances in a single process.
-
-### Phase 3: Dynamic Provider Registration (🚧 Planned)
-LLM providers are currently maintained in a module-level list.
-- **Goal:** Add a `register()` method to `ProviderRegistry` so developers can inject custom model providers (e.g., local Ollama endpoints or proprietary enterprise gateways) without modifying core code.
-
-### Phase 4: Multi-Agent Support (🚧 Planned)
-Currently, a single `Langclaw` app maps to a single agent configuration.
-- **Goal:** Support named agents with distinct models and per-agent tool sets, allowing complex multi-agent routing.
-- **Example Use Case:** A "support" agent running a fast Haiku model with FAQ tools, and an "admin" agent running a reasoning model with full system access, routed based on channel or user intent.

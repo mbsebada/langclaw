@@ -104,7 +104,7 @@ flowchart TB
     subgraph channels [Channels]
         TG["Telegram"]
         DC["Discord"]
-        SL["Slack"]
+        WS["WebSocket"]
     end
 
     subgraph gateway [Gateway]
@@ -150,7 +150,7 @@ flowchart TB
 
 ### Data flow
 
-1. **User sends a message** on any channel (Telegram, Discord, Slack).
+1. **User sends a message** on any channel (Telegram, Discord, WebSocket).
 2. **Commands** (`/start`, `/reset`, `/help`, `/cron`) are handled instantly by the `CommandRouter` — they bypass the bus and never reach the LLM.
 3. **Regular messages** are published as `InboundMessage` to the message bus.
 4. **GatewayManager** consumes from the bus, resolves (or creates) a LangGraph thread via `SessionManager`, and streams the message through the agent.
@@ -175,6 +175,14 @@ flowchart TB
 | `checkpointer/` | Conversation state persistence (SQLite/Postgres) |
 | `config/` | Pydantic-settings configuration with env var support |
 
+## Roadmap
+
+- [ ] **Dynamic provider registration** — `app.register_provider()` for custom LLM endpoints (Ollama, enterprise gateways) without modifying core code
+- [ ] **Multi-agent support** — named agents with distinct models and per-agent tool sets, routed by channel or user intent
+- [ ] **More channels** — Slack, WhatsApp, REST API gateway
+- [ ] **Sub-agent delegation** — allow the primary agent to spawn child agents for parallel or specialised tasks
+- [ ] **Test coverage** - increase test coverage
+
 ## Further reading
 
-- [Architecture & Roadmap](docs/ARCHITECTURE.md) — detailed analysis, comparison with OpenClaw/Nanobot, phased roadmap
+- [Architecture](docs/ARCHITECTURE.md) — design principles, component deep-dive, and comparison with alternative frameworks
