@@ -3,12 +3,48 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
+import socket
 from typing import Any
+from urllib.parse import urlparse
 
 from langchain_core.tools import tool
 from loguru import logger
 
 _CRAWL_SEMAPHORE = asyncio.Semaphore(8)
+
+
+def _is_internal_url(url: str) -> bool:
+    """Return True if *url* resolves to a loopback or private network address."""
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname or ""
+    except Exception:
+        return True
+
+    if not hostname:
+        return True
+
+    _BLOCKED_HOSTS = {"localhost", "localhost.localdomain"}
+    if hostname.lower() in _BLOCKED_HOSTS:
+        return True
+
+    try:
+        addr = ipaddress.ip_address(hostname)
+        return addr.is_loopback or addr.is_private or addr.is_reserved
+    except ValueError:
+        pass
+
+    try:
+        resolved = socket.getaddrinfo(hostname, None, proto=socket.IPPROTO_TCP)
+        for _, _, _, _, sockaddr in resolved:
+            addr = ipaddress.ip_address(sockaddr[0])
+            if addr.is_loopback or addr.is_private or addr.is_reserved:
+                return True
+    except (socket.gaierror, OSError):
+        pass
+
+    return False
 
 
 async def _crawl_one(url: str) -> dict[str, Any]:
@@ -118,14 +154,26 @@ async def web_fetch(urls: list[str]) -> list[dict]:
         len(urls),
         urls,
     )
-    tasks = [_crawl_one(u) for u in urls]
+    safe_urls: list[str] = []
+    blocked: list[dict] = []
+    for u in urls:
+        if _is_internal_url(u):
+            logger.warning("Blocked internal/private URL: {}", u)
+            blocked.append({
+                "url": u,
+                "error": "Blocked: internal or private network addresses are not allowed.",
+            })
+        else:
+            safe_urls.append(u)
+
+    tasks = [_crawl_one(u) for u in safe_urls]
     results = await asyncio.gather(
         *tasks,
         return_exceptions=True,
     )
 
-    output: list[dict] = []
-    for url, res in zip(urls, results):
+    output: list[dict] = list(blocked)
+    for url, res in zip(safe_urls, results):
         if isinstance(res, Exception):
             logger.error("Error fetching {}: {}", url, res)
             output.append(
