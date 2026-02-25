@@ -11,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
 from langgraph.graph.state import CompiledStateGraph
 
@@ -24,7 +25,6 @@ from langclaw.middleware.permissions import (
     build_tool_permission_middleware,
 )
 from langclaw.middleware.rate_limit import RateLimitMiddleware
-from langclaw.providers.registry import provider_registry
 from langclaw.utils import to_virtual_path  # for extra_skills conversion
 
 if TYPE_CHECKING:
@@ -89,7 +89,7 @@ def create_claw_agent(
     except ImportError as exc:
         raise ImportError("deepagents is required. Install with: uv add deepagents") from exc
 
-    resolved_model = model or provider_registry.resolve_model(config.agents.model, config.providers)
+    resolved_model = model or init_chat_model(config.agents.model)
 
     skills = [config.agents.skills_source] + [
         to_virtual_path(s, config.agents.workspace_dir) for s in (extra_skills or [])

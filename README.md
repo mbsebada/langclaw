@@ -169,7 +169,7 @@ flowchart TB
 | `bus/` | Message bus abstraction (asyncio, RabbitMQ, Kafka) |
 | `agents/` | LangGraph agent construction and tool wiring |
 | `middleware/` | Request pipeline (RBAC, rate limit, content filter, PII) |
-| `providers/` | LLM provider registry (OpenAI, Anthropic, Google, Azure) |
+| `providers/` | LLM model resolution via LangChain `init_chat_model` |
 | `cron/` | Scheduled jobs via APScheduler v4 (SQLite/Postgres persistence) |
 | `session/` | Maps (channel, user, context) to LangGraph thread IDs |
 | `checkpointer/` | Conversation state persistence (SQLite/Postgres) |
@@ -177,7 +177,6 @@ flowchart TB
 
 ## Roadmap
 
-- [ ] **Dynamic provider registration** — `app.register_provider()` for custom LLM endpoints (Ollama, enterprise gateways) without modifying core code
 - [ ] **Multi-agent support** — named agents with distinct models and per-agent tool sets, routed by channel or user intent
 - [ ] **More channels** — Slack, WhatsApp, REST API gateway
 - [ ] **Sub-agent delegation** — allow the primary agent to spawn child agents for parallel or specialised tasks

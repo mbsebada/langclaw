@@ -4,7 +4,6 @@ from langclaw.config.schema import (
     ChannelsConfig,
     CheckpointerConfig,
     LangclawConfig,
-    ProvidersConfig,
     load_config,
     save_default_config,
 )
@@ -17,5 +16,4 @@ __all__ = [
     "BusConfig",
     "ChannelsConfig",
     "CheckpointerConfig",
-    "ProvidersConfig",
 ]

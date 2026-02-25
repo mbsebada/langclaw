@@ -48,38 +48,6 @@ def test_config_env_override(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Provider registry
-# ---------------------------------------------------------------------------
-
-
-def test_provider_registry_list():
-    """ProviderRegistry should enumerate built-in providers."""
-    from langclaw.config.schema import ProvidersConfig
-    from langclaw.providers import provider_registry
-
-    providers_cfg = ProvidersConfig()
-    rows = provider_registry.list_configured(providers_cfg)
-    names = [r["name"] for r in rows]
-    assert "openai" in names
-    assert "anthropic" in names
-    assert "openrouter" in names
-
-
-def test_provider_spec_match():
-    """ProviderRegistry._match_spec should resolve model strings correctly."""
-    from langclaw.providers.registry import ProviderRegistry
-
-    reg = ProviderRegistry()
-    spec = reg._match_spec("anthropic:claude-sonnet-4-5-20250929")
-    assert spec is not None
-    assert spec.name == "anthropic"
-
-    spec2 = reg._match_spec("gpt-4.1")
-    assert spec2 is not None
-    assert spec2.name == "openai"
-
-
-# ---------------------------------------------------------------------------
 # Middleware
 # ---------------------------------------------------------------------------
 

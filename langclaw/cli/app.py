@@ -339,19 +339,26 @@ def cron_remove(
 # ---------------------------------------------------------------------------
 
 
+_WELL_KNOWN_ENV_KEYS = [
+    ("OPENAI_API_KEY", "OpenAI"),
+    ("ANTHROPIC_API_KEY", "Anthropic"),
+    ("GOOGLE_API_KEY", "Google"),
+    ("AZURE_OPENAI_API_KEY", "Azure OpenAI"),
+    ("OPENROUTER_API_KEY", "OpenRouter"),
+]
+
+
 @app.command()
 def status() -> None:
     """Show configuration and provider health."""
-    from langclaw.providers import provider_registry
+    import os
 
     cfg = load_config()
 
-    typer.echo("\n=== Providers ===")
-    rows = provider_registry.list_configured(cfg.providers)
-    for row in rows:
-        mark = "✓" if row["configured"] == "yes" else "✗"
-        gw = " (gateway)" if row["gateway"] == "yes" else ""
-        typer.echo(f"  {mark} {row['display']}{gw}")
+    typer.echo("\n=== Provider Keys (env) ===")
+    for env_key, display in _WELL_KNOWN_ENV_KEYS:
+        state = "set" if os.environ.get(env_key) else "not set"
+        typer.echo(f"  {display:<16} {env_key}: {state}")
 
     typer.echo("\n=== Channels ===")
     ch = cfg.channels

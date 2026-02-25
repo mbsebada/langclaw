@@ -118,29 +118,6 @@ _CONFIG_PATH = _LANGCLAW_HOME / "config.json"
 # ---------------------------------------------------------------------------
 
 
-class ProviderConfig(BaseModel):
-    api_key: str = ""
-    api_base: str = ""
-
-
-class AzureOpenAIProviderConfig(BaseModel):
-    api_key: str = ""
-    api_base: str = ""
-    """Azure endpoint URL, e.g. https://<resource>.openai.azure.com/"""
-    api_version: str = "2025-01-01-preview"
-    """Azure OpenAI API version string. See Azure docs for supported values."""
-
-
-class ProvidersConfig(BaseModel):
-    model_config = {"extra": "allow"}
-
-    openai: ProviderConfig = Field(default_factory=ProviderConfig)
-    anthropic: ProviderConfig = Field(default_factory=ProviderConfig)
-    openrouter: ProviderConfig = Field(default_factory=ProviderConfig)
-    google: ProviderConfig = Field(default_factory=ProviderConfig)
-    azure_openai: AzureOpenAIProviderConfig = Field(default_factory=AzureOpenAIProviderConfig)
-
-
 class TelegramChannelConfig(BaseModel):
     enabled: bool = False
     token: str = ""
@@ -404,7 +381,9 @@ class LangclawConfig(BaseSettings):
     Environment variable format (double-underscore delimiter):
         LANGCLAW__AGENTS__MODEL=openai:gpt-4.1
         LANGCLAW__BUS__BACKEND=rabbitmq
-        LANGCLAW__PROVIDERS__ANTHROPIC__API_KEY=sk-...
+
+    LLM provider keys use standard env vars (loaded from ``.env`` via
+    ``load_dotenv``): ``ANTHROPIC_API_KEY``, ``OPENAI_API_KEY``, etc.
     """
 
     model_config = SettingsConfigDict(
@@ -416,7 +395,6 @@ class LangclawConfig(BaseSettings):
         extra="ignore",
     )
 
-    providers: ProvidersConfig = Field(default_factory=ProvidersConfig)
     channels: ChannelsConfig = Field(default_factory=ChannelsConfig)
     agents: AgentConfig = Field(default_factory=AgentConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
@@ -458,7 +436,15 @@ class LangclawConfig(BaseSettings):
 
 
 def load_config() -> LangclawConfig:
-    """Load and return the merged LangclawConfig."""
+    """Load and return the merged LangclawConfig.
+
+    Also calls ``load_dotenv()`` so that standard provider env vars
+    (``ANTHROPIC_API_KEY``, ``OPENAI_API_KEY``, etc.) from ``.env``
+    are available in ``os.environ`` for ``init_chat_model``.
+    """
+    from dotenv import load_dotenv
+
+    load_dotenv(override=False)
     return LangclawConfig()
 
 
