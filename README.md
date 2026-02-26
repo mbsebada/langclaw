@@ -149,6 +149,41 @@ pip install "langclaw[all]"
 
 Available extras: `telegram`, `discord`, `websocket`, `postgres`, `rabbitmq`, `kafka`, `mcp`, `search`, `gmail`.
 
+## Quick Start
+
+1. **Install the framework and a channel plugin** (e.g., Telegram):
+   ```bash
+   pip install "langclaw[telegram]"
+   ```
+
+2. **Set your environment variables** in a `.env` file:
+   ```env
+   LANGCLAW__PROVIDERS__OPENAI__API_KEY=sk-...
+   LANGCLAW__CHANNELS__TELEGRAM__BOT_TOKEN=123456:ABC-DEF...
+   ```
+
+3. **Create your app** (`app.py`):
+   ```python
+   from langclaw import Langclaw
+
+   app = Langclaw(
+       system_prompt="You are a friendly assistant. Keep answers short and helpful."
+   )
+
+   @app.tool()
+   async def reverse_text(text: str) -> str:
+       """Reverse the given text. Useful for word games and puzzles."""
+       return text[::-1]
+
+   if __name__ == "__main__":
+       app.run()
+   ```
+
+4. **Run it**:
+   ```bash
+   python app.py
+   ```
+
 ## Packages
 
 | Package | Purpose |
@@ -163,7 +198,7 @@ Available extras: `telegram`, `discord`, `websocket`, `postgres`, `rabbitmq`, `k
 | `session/` | Maps (channel, user, context) to LangGraph thread IDs |
 | `checkpointer/` | Conversation state persistence — SQLite (dev), Postgres (prod) |
 | `providers/` | LLM model resolution via `init_chat_model` |
-| `cli/` | Typer CLI: `langclaw gateway`, `langclaw agent`, `langclaw cron`, `langclaw status` |
+| `cli/` | Typer CLI: `langclaw init`, `langclaw gateway`, `langclaw agent`, `langclaw cron`, `langclaw status` |
 
 ## Roadmap
 
