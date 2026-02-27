@@ -18,7 +18,7 @@ FastAPI gave web developers a declarative, decorator-driven way to build APIs. L
 
 ## Why Use Langclaw
 
-1. **Framework, not a fork**: `pip install langclaw` and build on top of it — like Flask/FastAPI for agentic systems. No repo cloning, no boilerplate.
+1. **Framework, not a fork**: `uv add langclaw` and build on top of it — like Flask/FastAPI for agentic systems. No repo cloning, no boilerplate.
 2. **Multi-channel from day one**: Telegram, Discord, WebSocket out of the box. Add custom channels with a single `app.add_channel()` call.
 3. **Declarative RBAC**: `app.role("analyst", tools=["*"])` — one line to define who can use what. Permissions are enforced as middleware before the LLM sees anything.
 4. **Subagent delegation**: Register specialist subagents that run in isolated contexts. The main agent delegates via a built-in `task` tool; results flow back cleanly or stream directly to the channel.
@@ -135,16 +135,16 @@ Cron jobs publish `InboundMessage` to the same bus, flowing through the identica
 ## Installation
 
 ```bash
-pip install langclaw
+uv add langclaw
 ```
 
 With channel and backend extras:
 
 ```bash
-pip install "langclaw[telegram,postgres,rabbitmq]"
+uv add "langclaw[telegram,postgres,rabbitmq]"
 
 # Or install everything:
-pip install "langclaw[all]"
+uv add "langclaw[all]"
 ```
 
 Available extras: `telegram`, `discord`, `websocket`, `postgres`, `rabbitmq`, `kafka`, `mcp`, `search`, `gmail`.
@@ -153,7 +153,7 @@ Available extras: `telegram`, `discord`, `websocket`, `postgres`, `rabbitmq`, `k
 
 1. **Install the framework and a channel plugin** (e.g., Telegram):
    ```bash
-   pip install "langclaw[telegram]"
+   uv add "langclaw[telegram]"
    ```
 
 2. **Set your environment variables** in a `.env` file:
@@ -221,7 +221,7 @@ Available extras: `telegram`, `discord`, `websocket`, `postgres`, `rabbitmq`, `k
 
 - **Multi-agent routing** — named agents with distinct models, routed by channel or user intent
 - **More channels** — Slack, WhatsApp, REST API gateway
-- **Plugin ecosystem** — `langclaw-*` tool packs installable via pip
+- **Plugin ecosystem** — `langclaw-*` tool packs installable via `uv add`
 - **Observability** — OpenTelemetry tracing for the full message flow
 - **Test coverage** — comprehensive tests across all modules
 
