@@ -62,20 +62,20 @@ export function Dashboard({ campaignId }: DashboardProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       <TopBar campaign={campaign} onChatToggle={() => setChatOpen(!chatOpen)} />
 
-      <div className="flex-1 flex">
+      <div className="flex-1 flex min-h-0">
         {/* Main content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="p-4 flex items-center justify-between">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-shrink-0 p-4 flex items-center justify-between">
             <StatsPanel />
             <ScanControls campaignId={campaignId} />
           </div>
 
           <ScanProgressPanel />
 
-          <div className="flex-1 overflow-hidden px-4 pb-4">
+          <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4">
             <Pipeline campaignId={campaignId} />
           </div>
         </div>

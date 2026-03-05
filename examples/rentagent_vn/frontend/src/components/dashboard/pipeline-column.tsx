@@ -17,9 +17,9 @@ export function PipelineColumn({
   campaignId,
 }: PipelineColumnProps) {
   return (
-    <div className="flex flex-col min-w-[280px] w-[280px] bg-muted/30 rounded-lg">
-      {/* Column header */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b">
+    <div className="flex flex-col min-w-[280px] w-[280px] h-full bg-muted/30 rounded-lg overflow-hidden">
+      {/* Column header - fixed */}
+      <div className="flex-shrink-0 flex items-center justify-between px-3 py-2.5 border-b bg-muted/30">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${stage.color}`} />
           <span className="text-sm font-medium">{stage.label}</span>
@@ -29,9 +29,9 @@ export function PipelineColumn({
         </Badge>
       </div>
 
-      {/* Cards */}
-      <ScrollArea className="flex-1 p-2">
-        <div className="space-y-2">
+      {/* Cards - scrollable */}
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="p-2 space-y-2">
           {listings.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-8">
               Chưa có tin nào
