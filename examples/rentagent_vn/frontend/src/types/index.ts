@@ -211,3 +211,41 @@ export interface ScanStreamState {
   listingsFound: number;
   startedAt: number | null;
 }
+
+// ---------------------------------------------------------------------------
+// Zalo
+// ---------------------------------------------------------------------------
+
+export interface ZaloStatus {
+  connected: boolean;
+  phone_number: string | null;
+  error: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Outreach
+// ---------------------------------------------------------------------------
+
+export type OutreachStatus = "drafted" | "sent" | "failed" | "replied";
+
+export interface OutreachMessage {
+  id: string;
+  listing_id: string;
+  campaign_id: string;
+  draft_text: string;
+  final_text: string | null;
+  status: OutreachStatus;
+  landlord_phone: string | null;
+  zalo_user_id: string | null;
+  sent_at: string | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const OUTREACH_STATUS_LABELS: Record<OutreachStatus, string> = {
+  drafted: "Đã soạn tin",
+  sent: "Đã gửi",
+  failed: "Lỗi",
+  replied: "Đã phản hồi",
+};

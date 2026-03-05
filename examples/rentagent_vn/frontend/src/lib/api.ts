@@ -8,8 +8,10 @@ import type {
   CampaignPreferences,
   CampaignStats,
   Listing,
+  OutreachMessage,
   PipelineStage,
   Scan,
+  ZaloStatus,
 } from "@/types";
 
 const BASE_URL =
@@ -153,5 +155,81 @@ export async function getCampaignStats(
 ): Promise<CampaignStats> {
   return request<CampaignStats>(
     `/api/v1/campaigns/${campaignId}/stats`
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Zalo
+// ---------------------------------------------------------------------------
+
+export async function getZaloStatus(): Promise<ZaloStatus> {
+  return request<ZaloStatus>("/api/v1/zalo/status");
+}
+
+export async function connectZaloCookie(
+  cookie: string,
+  imei: string,
+  userAgent: string
+): Promise<ZaloStatus> {
+  return request<ZaloStatus>("/api/v1/zalo/auth/cookie", {
+    method: "POST",
+    body: JSON.stringify({ cookie, imei, user_agent: userAgent }),
+  });
+}
+
+export async function connectZaloQR(): Promise<{ qr_path: string }> {
+  return request<{ qr_path: string }>("/api/v1/zalo/auth/qr", {
+    method: "POST",
+  });
+}
+
+export async function disconnectZalo(): Promise<ZaloStatus> {
+  return request<ZaloStatus>("/api/v1/zalo/logout", {
+    method: "POST",
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Outreach
+// ---------------------------------------------------------------------------
+
+export async function draftOutreach(
+  campaignId: string,
+  listingId: string,
+  customNotes?: string
+): Promise<OutreachMessage> {
+  return request<OutreachMessage>(
+    `/api/v1/campaigns/${campaignId}/listings/${listingId}/outreach`,
+    {
+      method: "POST",
+      body: JSON.stringify(customNotes ? { custom_notes: customNotes } : {}),
+    }
+  );
+}
+
+export async function sendOutreach(
+  campaignId: string,
+  listingId: string,
+  messageId: string,
+  finalText?: string
+): Promise<OutreachMessage> {
+  return request<OutreachMessage>(
+    `/api/v1/campaigns/${campaignId}/listings/${listingId}/outreach/send`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        message_id: messageId,
+        ...(finalText ? { final_text: finalText } : {}),
+      }),
+    }
+  );
+}
+
+export async function getOutreachHistory(
+  campaignId: string,
+  listingId: string
+): Promise<OutreachMessage[]> {
+  return request<OutreachMessage[]>(
+    `/api/v1/campaigns/${campaignId}/listings/${listingId}/outreach`
   );
 }
