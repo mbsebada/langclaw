@@ -45,6 +45,7 @@ dependencies = [
     "langchain-openai>=1.1.10",
     "tenacity>=9.1.4",
     "loguru>=0.7.3",
+    "fastapi>=0.135.1",
 ]
 
 [project.optional-dependencies]
