@@ -363,9 +363,16 @@ export const DEFAULT_CRITERIA: ResearchCriteriaOption[] = [
 export type ResearchSSEEventType =
   | "started"
   | "progress"
+  | "streaming_url"
   | "completed"
   | "failed"
   | "done";
+
+export interface ResearchLiveState {
+  browserUrl: string | null;
+  currentStep: string | null;
+  currentDetail: string | null;
+}
 
 export interface ResearchSSEEvent {
   type: ResearchSSEEventType;
@@ -375,6 +382,7 @@ export interface ResearchSSEEvent {
   address?: string;
   step?: string;
   detail?: string;
+  browser_url?: string;
   overall_score?: number;
   verdict?: string;
   error?: string;
