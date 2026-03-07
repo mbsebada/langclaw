@@ -88,48 +88,34 @@ export function ListingDetail({
       <Sheet open onOpenChange={() => onClose()}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
-            <SheetTitle className="text-base pr-6">
-              {listing.title || "Chi tiết tin đăng"}
+            <SheetTitle className="text-lg pr-6 leading-tight">
+              {listing.title?.replace(/\s*·\s*null/gi, '').replace(/null\s*·\s*/gi, '').trim() || "Chi tiết tin đăng"}
             </SheetTitle>
           </SheetHeader>
 
-          <div className="mt-4 space-y-5">
-            {/* Thumbnail */}
-            {listing.thumbnail_url && (
-              <img
-                src={listing.thumbnail_url}
-                alt=""
-                className="w-full h-48 object-cover rounded-lg bg-muted"
-              />
+          <div className="mt-6 flex flex-col gap-6 px-1">
+            {/* Thumbnail with aspect ratio and fallback */}
+            {listing.thumbnail_url ? (
+              <div className="w-full aspect-video rounded-xl overflow-hidden bg-muted border">
+                <img
+                  src={listing.thumbnail_url}
+                  alt={listing.title || "Hình ảnh bất động sản"}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                    const parent = (e.target as HTMLImageElement).parentElement;
+                    if (parent) {
+                      parent.classList.add('flex', 'items-center', 'justify-center');
+                      parent.innerHTML = '<span class="text-muted-foreground text-sm">Không tải được hình</span>';
+                    }
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="w-full aspect-video rounded-xl bg-muted border flex items-center justify-center text-muted-foreground text-sm">
+                Chưa có hình ảnh
+              </div>
             )}
-
-            {/* Research results (if available) */}
-            {(() => {
-              const rid = listing.research_id || researchByListing[listing.id];
-              const research = rid ? researching[rid] : undefined;
-              if (research && research.status === "done" && research.scores) {
-                return (
-                  <>
-                    <div className="rounded-lg border border-teal-200 bg-teal-50/30 p-4">
-                      <ResearchResults
-                        research={research}
-                        campaignId={campaignId}
-                        listingId={listing.id}
-                      />
-                    </div>
-                    <Separator />
-                  </>
-                );
-              }
-              if (research && (research.status === "running" || research.status === "queued")) {
-                return (
-                  <div className="rounded-lg border p-3">
-                    <ResearchProgress research={research} />
-                  </div>
-                );
-              }
-              return null;
-            })()}
 
             {/* Price */}
             <div>
@@ -185,100 +171,49 @@ export function ListingDetail({
               </div>
             )}
 
+            <Separator />
+
+            {/* Research results (if available) */}
+            {(() => {
+              const rid = listing.research_id || researchByListing[listing.id];
+              const research = rid ? researching[rid] : undefined;
+              if (research && research.status === "done" && research.scores) {
+                return (
+                  <div className="rounded-lg border border-teal-200 bg-teal-50/30 dark:bg-teal-950/20 p-4">
+                    <ResearchResults
+                      research={research}
+                      campaignId={campaignId}
+                      listingId={listing.id}
+                    />
+                  </div>
+                );
+              }
+              if (research && (research.status === "running" || research.status === "queued")) {
+                return (
+                  <div className="rounded-lg border p-3">
+                    <ResearchProgress research={research} />
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
             {/* Description */}
             {listing.description && (
-              <div>
-                <p className="text-sm font-medium mb-1">Mô tả</p>
-                <p className="text-sm text-muted-foreground whitespace-pre-line">
-                  {listing.description}
-                </p>
-              </div>
-            )}
-
-            <Separator />
-
-            {/* Landlord contact */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium">Liên hệ</p>
-                {outreachStatus && (
-                  <Badge
-                    variant={outreachStatus === "sent" || outreachStatus === "replied" ? "default" : "secondary"}
-                    className="text-xs"
-                  >
-                    {OUTREACH_STATUS_LABELS[outreachStatus]}
-                  </Badge>
-                )}
-              </div>
-              <div className="space-y-3">
-                {listing.landlord_name && (
-                  <p className="text-sm">{listing.landlord_name}</p>
-                )}
-
-                {listing.landlord_phone && (
-                  <Button
-                    onClick={() => setOutreachOpen(true)}
-                    className="w-full"
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    Liên hệ chủ nhà
-                  </Button>
-                )}
-
-                <div className="flex gap-2">
-                  {listing.landlord_phone && (
-                    <>
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={`tel:${listing.landlord_phone}`}>
-                          <Phone className="h-3.5 w-3.5 mr-1" />
-                          {listing.landlord_phone}
-                        </a>
-                      </Button>
-                      <Button variant="outline" size="sm" asChild>
-                        <a
-                          href={`https://zalo.me/${listing.landlord_phone}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <MessageCircle className="h-3.5 w-3.5 mr-1" />
-                          Zalo
-                        </a>
-                      </Button>
-                    </>
-                  )}
-                  {listing.landlord_facebook_url && (
-                    <Button variant="outline" size="sm" asChild>
-                      <a
-                        href={listing.landlord_facebook_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                        Facebook
-                      </a>
-                    </Button>
-                  )}
+              <>
+                <Separator />
+                <div>
+                  <p className="text-sm font-medium mb-1">Mô tả</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line line-clamp-6">
+                    {listing.description}
+                  </p>
                 </div>
-              </div>
-            </div>
-
-            {/* Source link */}
-            {listing.listing_url && (
-              <Button variant="link" size="sm" className="px-0" asChild>
-                <a
-                  href={listing.listing_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                  Xem bài gốc
-                </a>
-              </Button>
+              </>
             )}
 
             <Separator />
 
-            {/* Actions */}
+            {/* Status */}
             <div>
               <p className="text-sm font-medium mb-2">Trạng thái</p>
               <div className="flex gap-2">
@@ -325,15 +260,94 @@ export function ListingDetail({
               )}
             </div>
 
-            {/* Platform + date metadata */}
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {listing.source_platform && (
-                <Badge variant="outline" className="text-xs">
-                  {listing.source_platform}
-                </Badge>
+            <Separator />
+
+            {/* Contact Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">Liên hệ</p>
+                {outreachStatus && (
+                  <Badge
+                    variant={outreachStatus === "sent" || outreachStatus === "replied" ? "default" : "secondary"}
+                    className="text-xs"
+                  >
+                    {OUTREACH_STATUS_LABELS[outreachStatus]}
+                  </Badge>
+                )}
+              </div>
+
+              {listing.landlord_name && (
+                <p className="text-sm text-muted-foreground">{listing.landlord_name}</p>
               )}
-              {listing.posted_date && (
-                <span>Đăng: {listing.posted_date}</span>
+
+              {/* Primary CTA */}
+              {listing.landlord_phone && (
+                <Button onClick={() => setOutreachOpen(true)} className="w-full" size="lg">
+                  <Send className="h-4 w-4 mr-2" />
+                  Liên hệ chủ nhà
+                </Button>
+              )}
+
+              {/* Secondary actions */}
+              <div className="flex flex-wrap gap-2">
+                {listing.landlord_phone && (
+                  <>
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={`tel:${listing.landlord_phone}`}>
+                        <Phone className="h-3.5 w-3.5 mr-1.5" />
+                        Gọi điện
+                      </a>
+                    </Button>
+                    <Button variant="outline" size="sm" asChild>
+                      <a
+                        href={`https://zalo.me/${listing.landlord_phone}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
+                        Zalo
+                      </a>
+                    </Button>
+                  </>
+                )}
+                {listing.landlord_facebook_url && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a
+                      href={listing.landlord_facebook_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                      Facebook
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Source link + Platform metadata */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
+              <div className="flex items-center gap-2">
+                {listing.source_platform && (
+                  <Badge variant="outline" className="text-xs">
+                    {listing.source_platform}
+                  </Badge>
+                )}
+                {listing.posted_date && (
+                  <span>Đăng: {listing.posted_date}</span>
+                )}
+              </div>
+              {listing.listing_url && (
+                <Button variant="link" size="sm" className="px-0 h-auto" asChild>
+                  <a
+                    href={listing.listing_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                    Xem bài gốc
+                  </a>
+                </Button>
               )}
             </div>
           </div>
