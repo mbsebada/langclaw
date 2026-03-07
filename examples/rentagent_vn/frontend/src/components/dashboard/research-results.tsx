@@ -111,8 +111,8 @@ export function ResearchResults({
       {/* Tab: Details */}
       {activeTab === "details" && scores && (
         <div className="space-y-2">
-          {Object.entries(scores.criteria).map(([key, criterion]) => (
-            <Collapsible key={key}>
+          {scores.criteria.map((criterion) => (
+            <Collapsible key={criterion.criterion_key}>
               <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md p-2 hover:bg-muted/50 text-left">
                 <div className="flex items-center gap-2">
                   <ScoreBadge score={criterion.score} size="sm" />
@@ -147,14 +147,14 @@ export function ResearchResults({
                 )}
 
                 {/* Detail key-values */}
-                {Object.keys(criterion.details).length > 0 && (
+                {criterion.details.length > 0 && (
                   <div className="mt-2 space-y-1">
-                    {Object.entries(criterion.details).map(([k, v]) => (
-                      <div key={k} className="flex gap-2 text-xs">
+                    {criterion.details.map((detail, idx) => (
+                      <div key={idx} className="flex gap-2 text-xs">
                         <span className="text-muted-foreground font-medium min-w-[80px] capitalize">
-                          {k}:
+                          {detail.key}:
                         </span>
-                        <span className="text-foreground">{v}</span>
+                        <span className="text-foreground">{detail.value}</span>
                       </div>
                     ))}
                   </div>
