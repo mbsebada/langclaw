@@ -25,6 +25,8 @@ def _is_internal_url(url: str) -> bool:
     if not hostname:
         return True
 
+    hostname = hostname.strip("[]")
+
     _BLOCKED_HOSTS = {"localhost", "localhost.localdomain"}
     if hostname.lower() in _BLOCKED_HOSTS:
         return True
