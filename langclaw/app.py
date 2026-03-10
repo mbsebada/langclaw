@@ -572,6 +572,20 @@ class Langclaw:
 
         logger.remove()
         logger.add(sys.stderr, level=cfg.log_level.upper())
+
+        # Write INFO-and-above to date-based log files so agents can self-debug.
+        log_dir = cfg.agents.workspace_dir / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        logger.add(
+            str(log_dir / "{time:YYYY-MM-DD}.log"),
+            level="INFO",
+            rotation="00:00",
+            retention="30 days",
+            format=(
+                "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {name}:{function}:{line} - {message}"
+            ),
+        )
+
         bus_cfg = cfg.bus
         cp_cfg = cfg.checkpointer
 

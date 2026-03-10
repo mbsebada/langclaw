@@ -5,6 +5,30 @@ Shared utilities for langclaw internals.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from langchain_core.messages import BaseMessage
+
+
+def preview_message(msg: BaseMessage, max_chars: int = 200) -> str:
+    """Return a compact, trimmed preview of any LangChain message for logging.
+
+    Uses ``BaseMessage.pretty_repr()`` which handles all message types
+    (HumanMessage, AIMessage with/without tool_calls, ToolMessage, etc.)
+    gracefully, then trims to *max_chars* characters.
+
+    Args:
+        msg:       Any LangChain ``BaseMessage`` subclass.
+        max_chars: Maximum characters to include before truncating.
+
+    Returns:
+        A human-readable single-line-friendly preview string.
+    """
+    text = msg.pretty_repr()
+    if len(text) > max_chars:
+        text = text[:max_chars] + "…"
+    return text
 
 
 def to_virtual_path(path: str | Path, workspace_dir: Path) -> str:

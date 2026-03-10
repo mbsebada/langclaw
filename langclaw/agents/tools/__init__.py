@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from langclaw.agents.tools.web_fetch import web_fetch
@@ -83,6 +84,22 @@ def build_gmail_tools(config: LangclawConfig) -> list[Any]:
     ]
 
 
+def build_fs_tools(config: LangclawConfig, workspace_dir: Path) -> list[Any]:
+    """Return filesystem tools scoped to *workspace_dir*.
+
+    The tools are always included — they require no external credentials.
+    All file operations are sandboxed to *workspace_dir* and paths that
+    escape it are rejected.
+
+    Args:
+        config:        Loaded ``LangclawConfig`` (reserved for future flags).
+        workspace_dir: Absolute path to the agent's workspace root.
+    """
+    from langclaw.agents.tools.fs import make_fs_tools
+
+    return make_fs_tools(workspace_dir)
+
+
 def build_cron_tools(config: LangclawConfig, cron_manager: CronManager) -> list[Any]:
     """Return the cron tool when ``config.cron.enabled`` is ``True``.
 
@@ -104,6 +121,7 @@ def build_cron_tools(config: LangclawConfig, cron_manager: CronManager) -> list[
 
 __all__ = [
     "build_cron_tools",
+    "build_fs_tools",
     "build_gmail_tools",
     "build_web_tools",
     "make_web_search_tool",
