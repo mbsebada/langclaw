@@ -27,6 +27,7 @@ from langclaw.gateway.base import BaseChannel
 from langclaw.gateway.commands import CommandContext, CommandRouter
 from langclaw.gateway.utils import attachments_to_content_blocks
 from langclaw.session.manager import SessionManager
+from langclaw.utils import preview_message
 
 
 class GatewayManager:
@@ -307,6 +308,7 @@ class GatewayManager:
             for m in messages:
                 # ── Tool-progress: LLM decided to call a tool ─────────────
                 if isinstance(m, AIMessage) and m.tool_calls:
+                    logger.info(f"Tool call | {preview_message(m)}")
                     for tc in m.tool_calls:
                         tool_name = tc.get("name", "")
                         tool_call_id = tc.get("id", "")
@@ -329,6 +331,7 @@ class GatewayManager:
 
                 # ── Tool result: raw output from the tool ──────────────────
                 elif isinstance(m, ToolMessage):
+                    logger.info(f"Tool result | {preview_message(m)}")
                     content = m.content
                     if not isinstance(content, str):
                         content = str(content)
@@ -350,6 +353,7 @@ class GatewayManager:
 
                 # ── AI text response ───────────────────────────────────────
                 elif isinstance(m, AIMessage) and m.content:
+                    logger.info(f"AI response | {preview_message(m)}")
                     raw = m.content
                     if not isinstance(raw, str):
                         raw = " ".join(
@@ -465,6 +469,14 @@ class GatewayManager:
         agent_name = await self._resolve_agent_name(msg)
         effective_context_id = msg.context_id if agent_name == "default" else f"agent:{agent_name}"
 
+        _input_msg = HumanMessage(
+            content=attachments_to_content_blocks(msg.content, msg.attachments)
+        )
+        logger.info(
+            f"Message received | channel={msg.channel} user={msg.user_id} "
+            f"origin={msg.origin} agent={agent_name} | {preview_message(_input_msg)}"
+        )
+
         channel_context = {
             "channel": msg.channel,
             "user_id": msg.user_id,
@@ -514,6 +526,7 @@ class GatewayManager:
                 input_state,
                 **stream_kwargs,
             ):
+                logger.info(f"Chunk: {chunk}")
                 await self._stream_updates_to_outbound_message(chunk, msg, channel, metadata=meta)
 
         except Exception:
