@@ -15,7 +15,12 @@ from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
 from langgraph.graph.state import CompiledStateGraph
 
-from langclaw.agents.tools import build_cron_tools, build_gmail_tools, build_web_tools
+from langclaw.agents.tools import (
+    build_cron_tools,
+    build_fs_tools,
+    build_gmail_tools,
+    build_web_tools,
+)
 from langclaw.config.schema import LangclawConfig
 from langclaw.context import LangclawContext
 from langclaw.middleware.channel_context import ChannelContextMiddleware
@@ -238,6 +243,7 @@ def create_claw_agent(
     builtin_tools: list[Any] = []
     builtin_tools += build_web_tools(config)
     builtin_tools += build_gmail_tools(config)
+    builtin_tools += build_fs_tools(config, workspace_dir)
     if cron_manager is not None:
         builtin_tools += build_cron_tools(config, cron_manager)
 
