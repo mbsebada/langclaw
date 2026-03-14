@@ -1,0 +1,4 @@
+## 2024-05-14 - Overly Permissive CORS Configuration
+**Vulnerability:** The CORS configuration for the RentAgent VN API is overly permissive, allowing any HTTP method (`allow_methods=["*"]`) and any HTTP header (`allow_headers=["*"]`).
+**Learning:** This is a common security pitfall during development that is often missed before production deployment. While origins were restricted to localhost, the wildcards for methods and headers bypass intended browser security mechanisms for those allowed origins, potentially allowing cross-origin requests to perform actions they shouldn't.
+**Prevention:** Always restrict CORS configuration to the exact methods and headers required by the frontend application. Avoid using wildcards (`"*"`) for methods and headers unless absolutely necessary, and only if origins are strictly controlled.
