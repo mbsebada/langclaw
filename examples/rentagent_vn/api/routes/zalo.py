@@ -200,8 +200,12 @@ async def send_outreach_message(
 
     # Send message via Zalo
     try:
-        # TODO: remove hardcode phone
-        phone = "0334663383"
+        # Check for override (useful for testing so we don't spam real users)
+        override_phone = os.environ.get("ZALO_PHONE_OVERRIDE")
+        if override_phone:
+            logger.info(f"Using ZALO_PHONE_OVERRIDE: {override_phone} instead of {phone}")
+            phone = override_phone
+
         send_result = await _proxy_to_zalo(
             "POST",
             "/message/send",
