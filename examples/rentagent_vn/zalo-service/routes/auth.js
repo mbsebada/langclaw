@@ -34,7 +34,8 @@ router.post("/cookie", async (req, res, next) => {
  */
 router.post("/qr", async (req, res, next) => {
   try {
-    const qrPath = req.body.qrPath || "./qr.png";
+    // 🛡️ Sentinel: Hardcode path to prevent path traversal vulnerability via req.body.qrPath
+    const qrPath = "./qr.png";
     const result = await zaloClient.loginWithQR(qrPath);
     res.json(result);
   } catch (error) {
