@@ -1,0 +1,4 @@
+## 2024-05-24 - Overly permissive CORS configuration in RentAgent VN API
+**Vulnerability:** The FastAPI backend in the RentAgent VN example (`examples/rentagent_vn/api/server.py`) used a wildcard (`"*"`) for both `allow_methods` and `allow_headers` in its CORS middleware configuration, while also setting `allow_credentials=True`. This could potentially allow malicious origins to execute unintended HTTP methods or send custom headers with user credentials.
+**Learning:** It's a common oversight to use wildcards during development for convenience, but this compromises security, especially when `allow_credentials` is true. The API only uses `GET`, `POST`, `PATCH`, and `OPTIONS` and only requires the `Content-Type` header.
+**Prevention:** Always follow the principle of least privilege when configuring CORS. Explicitly define the exact methods and headers that are required by the application, rather than using wildcards, especially when credentials are allowed.
