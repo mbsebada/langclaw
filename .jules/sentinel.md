@@ -1,0 +1,4 @@
+## 2024-05-24 - [CRITICAL] Hardcoded Test Phone Numbers in Outreach Service
+**Vulnerability:** A test phone number (`0334663383`) was hardcoded in the Zalo messaging endpoint (`examples/rentagent_vn/api/routes/zalo.py`), overriding the actual target phone numbers retrieved from the database.
+**Learning:** Hardcoding test credentials or identifiers in production-bound routes presents a high risk of sending sensitive or production communications to unauthorized or unexpected destinations. In this specific case, real outreach messages were routed to a single, hardcoded phone number rather than to the actual listing's landlord.
+**Prevention:** Avoid leaving development/test overrides inline within code. Utilize environment variables (e.g., `ZALO_PHONE_OVERRIDE`) to allow isolated testing and guarantee production fallbacks safely process correct identifiers.

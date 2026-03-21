@@ -200,12 +200,14 @@ async def send_outreach_message(
 
     # Send message via Zalo
     try:
-        # TODO: remove hardcode phone
-        phone = "0334663383"
+        # Allow overriding the destination phone number for testing
+        override_phone = os.environ.get("ZALO_PHONE_OVERRIDE")
+        target_phone = override_phone if override_phone else phone
+
         send_result = await _proxy_to_zalo(
             "POST",
             "/message/send",
-            {"phone": phone, "text": final_text},
+            {"phone": target_phone, "text": final_text},
         )
         zalo_user_id = send_result.get("userId")
 
@@ -224,14 +226,14 @@ async def send_outreach_message(
         await queries.add_activity(
             campaign_id=campaign_id,
             event_type="outreach_sent",
-            message=f"Sent outreach message to {phone}",
+            message=f"Sent outreach message to {target_phone}",
             metadata={
                 "listing_id": listing_id,
                 "message_id": body.message_id,
             },
         )
 
-        logger.info(f"Outreach sent for listing {listing_id} to {phone}")
+        logger.info(f"Outreach sent for listing {listing_id} to {target_phone}")
         return updated
 
     except HTTPException as e:
