@@ -11,6 +11,7 @@ Tokens are stored as JSON at ``~/.langclaw/gmail_token.json`` by default
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -47,7 +48,9 @@ def _build_client_config(config: GmailConfig) -> dict:
 def save_credentials(creds: Credentials, path: Path) -> None:
     """Persist credentials to a JSON file."""
     path.parent.mkdir(parents=True, exist_ok=True)
+    os.chmod(path.parent, 0o700)
     path.write_text(creds.to_json(), encoding="utf-8")
+    os.chmod(path, 0o600)
     logger.debug("Gmail token saved to {}", path)
 
 

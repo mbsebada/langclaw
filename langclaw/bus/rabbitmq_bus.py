@@ -105,4 +105,9 @@ class RabbitMQMessageBus(BaseMessageBus):
             async for raw_msg in queue_iter:
                 async with raw_msg.process():
                     data = json.loads(raw_msg.body.decode())
-                    yield InboundMessage(**data)
+                    try:
+                        yield InboundMessage(**data)
+                    except (TypeError, ValueError) as exc:
+                        import logging
+                        logging.getLogger(__name__).warning("Invalid message from RabbitMQ: %s", exc)
+                        continue

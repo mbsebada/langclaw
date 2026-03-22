@@ -333,8 +333,6 @@ class DiscordChannel(BaseChannel):
         if not self._is_allowed(sender_id, username):
             logger.warning(
                 f"Discord user {sender_id} ({username}) not in allow_from — dropping message",
-                sender_id,
-                username,
             )
             try:
                 await message.reply(
@@ -385,7 +383,11 @@ class DiscordChannel(BaseChannel):
                 continue
             try:
                 media_dir.mkdir(parents=True, exist_ok=True)
-                file_path = media_dir / f"{attachment.id}_{attachment.filename.replace('/', '_')}"
+                safe_name = Path(attachment.filename).name.replace("\\", "_")
+                file_path = media_dir / f"{attachment.id}_{safe_name}"
+                if not file_path.resolve().is_relative_to(media_dir.resolve()):
+                    content_parts.append(f"[attachment: {attachment.filename} - invalid path]")
+                    continue
                 await attachment.save(file_path)
                 msg_attachments.append(
                     make_attachment(
@@ -394,6 +396,7 @@ class DiscordChannel(BaseChannel):
                         size=attachment.size or 0,
                     )
                 )
+                file_path.unlink(missing_ok=True)
             except Exception as exc:
                 logger.warning(f"Failed to download Discord attachment: {exc}")
                 content_parts.append(f"[attachment: {attachment.filename} - download failed]")
@@ -503,6 +506,13 @@ class DiscordChannel(BaseChannel):
             return
 
         user = interaction.user
+        if not self._is_allowed(str(user.id), user.name):
+            await interaction.response.send_message(
+                "Not authorised.",
+                ephemeral=True,
+            )
+            return
+
         ctx = CommandContext(
             channel=self.name,
             user_id=str(user.id),

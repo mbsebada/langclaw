@@ -22,6 +22,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 from typing import Any
 
 from langclaw.bus.base import (
@@ -39,15 +40,34 @@ from langclaw.gateway.utils import is_allowed
 logger = logging.getLogger(__name__)
 
 
+_RATE_LIMIT_MAX = 30
+_RATE_LIMIT_WINDOW = 60  # seconds
+_MAX_ATTACHMENTS = 10
+
+
 class _Connection:
     """Tracks one WebSocket client and its identity."""
 
-    __slots__ = ("ws", "user_id", "context_id")
+    __slots__ = ("ws", "user_id", "context_id", "_identity_locked", "_msg_timestamps")
 
     def __init__(self, ws: Any, user_id: str = "", context_id: str = "") -> None:
         self.ws = ws
         self.user_id = user_id
         self.context_id = context_id
+        self._identity_locked: bool = False
+        self._msg_timestamps: list[float] = []
+
+    def check_rate_limit(self) -> bool:
+        """Return True if this message is within rate limits, False otherwise."""
+        now = time.monotonic()
+        # Purge timestamps outside the window
+        self._msg_timestamps = [
+            t for t in self._msg_timestamps if now - t < _RATE_LIMIT_WINDOW
+        ]
+        if len(self._msg_timestamps) >= _RATE_LIMIT_MAX:
+            return False
+        self._msg_timestamps.append(now)
+        return True
 
 
 class WebSocketChannel(BaseChannel):
@@ -56,7 +76,7 @@ class WebSocketChannel(BaseChannel):
 
     Listens on ``ws://<host>:<port>`` and accepts JSON-framed messages.
     Broadcasts outbound messages to all connections that match the
-    ``(user_id, context_id)`` pair (or to all when ``chat_id`` is ``"*"``).
+    ``(user_id, context_id)`` pair.
 
     Args:
         config: WebSocket-specific section of LangclawConfig.channels.websocket.
@@ -69,6 +89,7 @@ class WebSocketChannel(BaseChannel):
         self._bus: BaseMessageBus | None = None
         self._server: Any = None
         self._connections: set[_Connection] = set()
+        self._conn_lock = asyncio.Lock()
 
     def is_enabled(self) -> bool:
         return self._config.enabled
@@ -93,6 +114,7 @@ class WebSocketChannel(BaseChannel):
             self._handler,
             host=self._config.host,
             port=self._config.port,
+            max_size=1_048_576,
         )
         logger.info(
             "WebSocketChannel listening on ws://%s:%s",
@@ -106,7 +128,8 @@ class WebSocketChannel(BaseChannel):
             self._server.close()
             await self._server.wait_closed()
             self._server = None
-        self._connections.clear()
+        async with self._conn_lock:
+            self._connections.clear()
         logger.info("WebSocketChannel stopped.")
 
     # ------------------------------------------------------------------
@@ -116,7 +139,8 @@ class WebSocketChannel(BaseChannel):
     async def _handler(self, ws: Any) -> None:
         """Handle a single WebSocket connection for its entire lifetime."""
         conn = _Connection(ws)
-        self._connections.add(conn)
+        async with self._conn_lock:
+            self._connections.add(conn)
         remote = ws.remote_address
         logger.info("WebSocket client connected: %s", remote)
 
@@ -134,8 +158,41 @@ class WebSocketChannel(BaseChannel):
                     )
                     continue
 
-                conn.user_id = data.get("user_id", conn.user_id or "ws-anon")
-                conn.context_id = data.get("context_id", conn.context_id or "default")
+                # --- Rate limiting ---
+                if not conn.check_rate_limit():
+                    await self._send_json(
+                        ws,
+                        {
+                            "type": "error",
+                            "content": "Rate limit exceeded. Max 30 messages per 60 seconds.",
+                        },
+                    )
+                    continue
+
+                # --- Identity: lock after first message ---
+                if not conn._identity_locked:
+                    user_id = data.get("user_id", "")
+                    if not user_id:
+                        await self._send_json(
+                            ws,
+                            {
+                                "type": "error",
+                                "content": "First message must contain user_id.",
+                            },
+                        )
+                        continue
+                    conn.user_id = user_id
+                    conn.context_id = data.get("context_id", "default")
+                    conn._identity_locked = True
+                elif data.get("user_id") and data["user_id"] != conn.user_id:
+                    await self._send_json(
+                        ws,
+                        {
+                            "type": "error",
+                            "content": "Cannot change user_id after connection is established.",
+                        },
+                    )
+                    continue
 
                 if not self._is_allowed(conn.user_id):
                     await self._send_json(
@@ -185,6 +242,15 @@ class WebSocketChannel(BaseChannel):
                     continue
 
                 raw_attachments = data.get("attachments") or []
+                if len(raw_attachments) > _MAX_ATTACHMENTS:
+                    await self._send_json(
+                        ws,
+                        {
+                            "type": "error",
+                            "content": f"Too many attachments. Maximum is {_MAX_ATTACHMENTS}.",
+                        },
+                    )
+                    continue
                 attachments = [
                     Attachment(
                         type=AttachmentType(a.get("type", "file")),
@@ -215,7 +281,8 @@ class WebSocketChannel(BaseChannel):
         except Exception as exc:
             logger.debug("WebSocket connection closed (%s): %s", remote, exc)
         finally:
-            self._connections.discard(conn)
+            async with self._conn_lock:
+                self._connections.discard(conn)
             logger.info("WebSocket client disconnected: %s", remote)
 
     # ------------------------------------------------------------------
@@ -268,16 +335,20 @@ class WebSocketChannel(BaseChannel):
     ) -> None:
         """Send *payload* to every connection matching the identity pair."""
         chat_id = f"{user_id}:{context_id}"
+        async with self._conn_lock:
+            snapshot = list(self._connections)
         dead: list[_Connection] = []
-        for conn in self._connections:
+        for conn in snapshot:
             conn_id = f"{conn.user_id}:{conn.context_id}"
-            if conn_id == chat_id or chat_id == "*":
+            if conn_id == chat_id:
                 try:
                     await self._send_json(conn.ws, payload)
                 except Exception:
                     dead.append(conn)
-        for conn in dead:
-            self._connections.discard(conn)
+        if dead:
+            async with self._conn_lock:
+                for conn in dead:
+                    self._connections.discard(conn)
 
     @staticmethod
     async def _send_json(ws: Any, data: dict[str, Any]) -> None:

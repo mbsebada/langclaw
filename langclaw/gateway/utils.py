@@ -8,6 +8,7 @@ check, and other helpers so individual channel implementations stay thin.
 from __future__ import annotations
 
 import base64
+import html as html_mod
 import mimetypes
 from pathlib import Path
 from typing import Any, Literal
@@ -72,17 +73,21 @@ def format_tool_progress(
       - ``"html"``     → ``<b>`` / ``<code>`` (Telegram)
       - ``"markdown"`` → ``**`` / backticks   (Discord, Slack, …)
     """
-    label = TOOL_LABELS.get(tool, f"🔧 {tool}")
+    label = TOOL_LABELS.get(tool)
+    if label is None:
+        label = f"🔧 {html_mod.escape(tool)}" if markup == "html" else f"🔧 {tool}"
     raw, is_code = _tool_arg_suffix(tool, args)
 
     if markup == "html":
         bold = lambda s: f"<b>{s}</b>"  # noqa: E731
-        code = lambda s: f"<code>{s}</code>"  # noqa: E731
+        code = lambda s: f"<code>{html_mod.escape(s)}</code>"  # noqa: E731
     else:
         bold = lambda s: f"**{s}**"  # noqa: E731
         code = lambda s: f"`{s}`"  # noqa: E731
 
     if raw:
+        if markup == "html":
+            raw = html_mod.escape(raw)
         suffix = f" {code(raw)}" if is_code else raw
         return f"Ran {bold(label)}{suffix}"
     return f"Ran {bold(label)}{code(str(args))}"

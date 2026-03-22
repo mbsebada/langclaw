@@ -90,6 +90,7 @@ class GatewayManager:
             for cmd_name, handler, description in extra_commands:
                 self._command_router.register(cmd_name, handler, description)
         self._channel_map: dict[str, BaseChannel] = {ch.name: ch for ch in self._channels}
+        self._handle_semaphore = asyncio.Semaphore(50)
 
         # Named agent registry — "default" always points to the main agent.
         self._agent_map: dict[str, CompiledStateGraph] = {"default": agent}
@@ -260,9 +261,14 @@ class GatewayManager:
         logger.info("Bus worker started.")
         async for msg in self._bus.subscribe():
             asyncio.create_task(
-                self._handle(msg),
+                self._handle_with_semaphore(msg),
                 name=f"handle:{msg.channel}:{msg.user_id}",
             )
+
+    async def _handle_with_semaphore(self, msg: InboundMessage) -> None:
+        """Wrap _handle with a semaphore to cap concurrent tasks."""
+        async with self._handle_semaphore:
+            await self._handle(msg)
 
     async def _stream_updates_to_outbound_message(
         self,
@@ -350,6 +356,7 @@ class GatewayManager:
                             },
                         )
                     )
+                    _tool_call_names.pop(tc_id, None)
 
                 # ── AI text response ───────────────────────────────────────
                 elif isinstance(m, AIMessage) and m.content:
@@ -388,7 +395,7 @@ class GatewayManager:
             return None
 
         stored_role = (msg.metadata or {}).get("user_role")
-        if stored_role:
+        if stored_role and msg.origin in ("cron", "heartbeat"):
             logger.debug(
                 "Using pre-resolved role '{}' from message metadata for user_id {}",
                 stored_role,

@@ -63,12 +63,6 @@ def make_move_file_tool(workspace_dir: Path) -> BaseTool:
             logger.warning("move_file: path traversal rejected for dst_dir={!r}", dst_dir)
             return {"error": f"Path '{dst_dir}' is outside the workspace directory."}
 
-        if not src_path.exists():
-            return {"error": f"Source file does not exist: '{src}'"}
-
-        if not src_path.is_file():
-            return {"error": f"Source path is not a file: '{src}'"}
-
         try:
             dst_path.mkdir(parents=True, exist_ok=True)
             destination = dst_path / src_path.name
@@ -79,6 +73,10 @@ def make_move_file_tool(workspace_dir: Path) -> BaseTool:
                 "from": str(src_path.relative_to(workspace_dir)),
                 "to": str(destination.relative_to(workspace_dir)),
             }
+        except FileNotFoundError:
+            return {"error": f"Source file does not exist: '{src}'"}
+        except IsADirectoryError:
+            return {"error": f"Source path is not a file: '{src}'"}
         except Exception as exc:
             logger.error("move_file: failed to move '{}': {}", src, exc)
             return {"error": f"Failed to move file: {exc}"}
@@ -117,17 +115,11 @@ def make_delete_file_tool(workspace_dir: Path) -> BaseTool:
             logger.warning("delete_file: path traversal rejected for path={!r}", path)
             return {"error": f"Path '{path}' is outside the workspace directory."}
 
-        if not file_path.exists():
-            return {"error": f"File does not exist: '{path}'"}
-
-        if not file_path.is_file():
-            return {"error": f"Path is not a file: '{path}'"}
-
         try:
             trash_dir = workspace_dir / ".trash"
             trash_dir.mkdir(parents=True, exist_ok=True)
 
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
             stem = file_path.stem
             suffix = file_path.suffix
             trash_name = f"{stem}.{timestamp}{suffix}"
@@ -140,6 +132,10 @@ def make_delete_file_tool(workspace_dir: Path) -> BaseTool:
                 "original": str(file_path.relative_to(workspace_dir)),
                 "trash_path": str(trash_path.relative_to(workspace_dir)),
             }
+        except FileNotFoundError:
+            return {"error": f"File does not exist: '{path}'"}
+        except IsADirectoryError:
+            return {"error": f"Path is not a file: '{path}'"}
         except Exception as exc:
             logger.error("delete_file: failed to trash '{}': {}", path, exc)
             return {"error": f"Failed to trash file: {exc}"}

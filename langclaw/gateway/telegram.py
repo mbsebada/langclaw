@@ -117,6 +117,20 @@ def _markdown_to_telegram_html(text: str) -> str:
     return text
 
 
+def _get_transient_errors() -> tuple[type[Exception], ...]:
+    """Return a tuple of transient Telegram error types suitable for retry."""
+    try:
+        from telegram.error import TimedOut, NetworkError
+        return (TimedOut, NetworkError)
+    except ImportError:
+        return (Exception,)
+
+
+def _sanitize_error(exc: BaseException) -> str:
+    """Redact bot tokens from exception messages to prevent token exposure in logs."""
+    return re.sub(r"bot\d+:[A-Za-z0-9_-]+", "bot<REDACTED>", str(exc))
+
+
 # ---------------------------------------------------------------------------
 # Channel
 # ---------------------------------------------------------------------------
@@ -296,7 +310,7 @@ class TelegramChannel(BaseChannel):
             await self._send_chunk(msg.chat_id, chunk, reply_to_id=reply_to_id)
 
     @retry(
-        retry=retry_if_exception_type(Exception),
+        retry=retry_if_exception_type(_get_transient_errors()),
         wait=wait_exponential(multiplier=1, min=2, max=10),
         stop=stop_after_attempt(3),
         reraise=True,
@@ -327,7 +341,7 @@ class TelegramChannel(BaseChannel):
             await bot.send_message(chat_id=chat_id, text=html, parse_mode="HTML", **reply_kw)
         except BadRequest as exc:
             if "can't parse" in str(exc).lower() or "parse" in str(exc).lower():
-                logger.warning(f"HTML parse failed ({exc}), retrying as plain text.")
+                logger.warning(f"HTML parse failed ({_sanitize_error(exc)}), retrying as plain text.")
                 await bot.send_message(chat_id=chat_id, text=text, **reply_kw)
             else:
                 raise
@@ -335,7 +349,7 @@ class TelegramChannel(BaseChannel):
             logger.error(
                 f"_send_chunk failed for {chat_id} "
                 f"(raw={len(text)}, html={len(html)}): "
-                f"{exc.__class__.__name__}: {exc}"
+                f"{exc.__class__.__name__}: {_sanitize_error(exc)}"
             )
             raise
 
@@ -387,7 +401,7 @@ class TelegramChannel(BaseChannel):
     async def _on_error(self, update: object, context: object) -> None:
         """Log PTB polling / handler errors."""
         err = getattr(context, "error", context)
-        logger.error(f"Telegram error: {err}")
+        logger.error(f"Telegram error: {_sanitize_error(err)}")
 
     # ------------------------------------------------------------------
     # PTB message handlers
@@ -443,6 +457,11 @@ class TelegramChannel(BaseChannel):
 
         user = update.message.from_user
         if not user:
+            return
+
+        user_id = str(user.id)
+        if not self._is_allowed(user_id, user.username):
+            await update.message.reply_text("Sorry, you are not authorised to use this bot.")
             return
 
         text = (update.message.text or "").strip()

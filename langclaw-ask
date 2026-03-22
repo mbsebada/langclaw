@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Wrapper script for langclaw agent delegation from OpenClaw.
+# Keeps invocation stable regardless of current working directory.
+ROOT_DIR="/Users/openclaw/Projects/langclaw"
+BIN_PATH="$ROOT_DIR/.venv/bin/langclaw"
+
+if [[ $# -eq 0 ]]; then
+  echo "Usage: langclaw-ask <prompt text>" >&2
+  exit 2
+fi
+
+if [[ ! -x "$BIN_PATH" ]]; then
+  echo "Error: langclaw binary not found at $BIN_PATH" >&2
+  echo "Run: cd $ROOT_DIR && source .venv/bin/activate && pip install -e ." >&2
+  exit 1
+fi
+
+cd "$ROOT_DIR"
+exec "$BIN_PATH" agent -m "$*"

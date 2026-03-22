@@ -22,6 +22,10 @@ def _is_internal_url(url: str) -> bool:
     except Exception:
         return True
 
+    # Block non-HTTP(S) schemes (file://, ftp://, gopher://, data://, etc.)
+    if parsed.scheme not in ("http", "https"):
+        return True
+
     if not hostname:
         return True
 
@@ -46,6 +50,13 @@ def _is_internal_url(url: str) -> bool:
     except (socket.gaierror, OSError):
         pass
 
+    # NOTE: There is a residual DNS rebinding TOCTOU risk — an attacker-controlled
+    # DNS server could return a safe IP during this check but a private IP when
+    # crawl4ai actually connects.  Fully mitigating this would require hooking into
+    # crawl4ai's HTTP client to validate the resolved IP at connect time.  The
+    # scheme validation + DNS pre-check together significantly reduce the attack
+    # surface, but callers operating in high-risk environments should consider
+    # network-level controls (e.g., egress firewall rules) as an additional layer.
     return False
 
 
@@ -151,6 +162,9 @@ async def web_fetch(urls: list[str]) -> list[dict]:
             Use when the user provides specific URLs they
             want to read or analyse.
     """
+    if len(urls) > 20:
+        return [{"error": "Too many URLs. Maximum allowed is 20."}]
+
     logger.debug(
         "Fetching content from {} URLs: {}",
         len(urls),

@@ -230,6 +230,11 @@ def make_send_email_tool(config: GmailConfig) -> BaseTool:
             bcc: BCC recipients (comma-separated). Optional.
         """
         logger.debug("send_email: to={}, subject={}", to, subject)
+
+        for field_name, field_val in [("to", to), ("cc", cc), ("bcc", bcc)]:
+            if field_val and ("\n" in field_val or "\r" in field_val):
+                return {"error": f"Invalid characters in {field_name} field."}
+
         loop = asyncio.get_running_loop()
         service = _get_gmail_service(config)
 
@@ -282,6 +287,11 @@ def make_draft_email_tool(config: GmailConfig) -> BaseTool:
             bcc: BCC recipients (comma-separated). Optional.
         """
         logger.debug("draft_email: to={}, subject={}", to, subject)
+
+        for field_name, field_val in [("to", to), ("cc", cc), ("bcc", bcc)]:
+            if field_val and ("\n" in field_val or "\r" in field_val):
+                return {"error": f"Invalid characters in {field_name} field."}
+
         loop = asyncio.get_running_loop()
         service = _get_gmail_service(config)
 

@@ -155,16 +155,19 @@ class HeartbeatManager:
 
             if result:
                 logger.debug(f"HeartbeatCondition '{condition.name}' fired: {result[:80]}")
-                await self._bus.publish(
-                    InboundMessage(
-                        channel=target.channel,
-                        user_id=target.user_id,
-                        context_id=target.context_id,
-                        chat_id=target.chat_id,
-                        content=result,
-                        origin="heartbeat",
-                        metadata={
-                            "condition": condition.name,
-                        },
+                try:
+                    await self._bus.publish(
+                        InboundMessage(
+                            channel=target.channel,
+                            user_id=target.user_id,
+                            context_id=target.context_id,
+                            chat_id=target.chat_id,
+                            content=result,
+                            origin="heartbeat",
+                            metadata={
+                                "condition": condition.name,
+                            },
+                        )
                     )
-                )
+                except Exception:
+                    logger.exception(f"HeartbeatCondition '{condition.name}' publish failed.")

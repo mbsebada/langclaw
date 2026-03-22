@@ -1,0 +1,23 @@
+#!/bin/zsh
+set -euo pipefail
+
+# Wrapper for routing OpenClaw tasks directly to Claude Code CLI.
+# This avoids manual copy/paste between chats and terminal sessions.
+
+if [[ $# -eq 0 ]]; then
+  echo "Usage: claude-code-ask <prompt text>" >&2
+  exit 2
+fi
+
+if ! command -v claude >/dev/null 2>&1; then
+  echo "Error: Claude Code CLI not found in PATH." >&2
+  echo "Install/login first, then retry." >&2
+  exit 1
+fi
+
+PROMPT="$*"
+export CLAUDE_CODE_ASK_PROMPT="$PROMPT"
+
+# Claude auth is stored in the user's interactive zsh environment.
+# Run via login shell to ensure the same auth context used in terminal.
+exec /bin/zsh -lc 'claude --print "$CLAUDE_CODE_ASK_PROMPT"'

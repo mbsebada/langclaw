@@ -96,4 +96,9 @@ class KafkaMessageBus(BaseMessageBus):
         if self._consumer is None:
             raise RuntimeError("Bus not started.")
         async for record in self._consumer:
-            yield InboundMessage(**record.value)
+            try:
+                yield InboundMessage(**record.value)
+            except (TypeError, ValueError) as exc:
+                import logging
+                logging.getLogger(__name__).warning("Invalid message from Kafka: %s", exc)
+                continue

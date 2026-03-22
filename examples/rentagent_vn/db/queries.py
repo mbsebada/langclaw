@@ -93,6 +93,9 @@ async def list_campaigns() -> list[dict[str, Any]]:
     return results
 
 
+_CAMPAIGN_ALLOWED_COLUMNS = frozenset({"name", "scan_frequency", "status"})
+
+
 async def update_campaign(campaign_id: str, **fields: Any) -> dict[str, Any] | None:
     db = await get_db()
     sets: list[str] = []
@@ -104,7 +107,7 @@ async def update_campaign(campaign_id: str, **fields: Any) -> dict[str, Any] | N
         elif key == "sources":
             sets.append("sources_json = ?")
             vals.append(json.dumps(val, ensure_ascii=False))
-        elif key in ("name", "scan_frequency", "status"):
+        elif key in _CAMPAIGN_ALLOWED_COLUMNS:
             sets.append(f"{key} = ?")
             vals.append(val)
     if not sets:

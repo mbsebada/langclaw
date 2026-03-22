@@ -64,7 +64,7 @@ class ZaloClient {
       console.error("Zalo login error:", error);
       this.connected = false;
       this.phoneNumber = null;
-      throw new Error(`Zalo login failed: ${error.message}`);
+      throw new Error("Zalo login failed");
     }
   }
 
@@ -91,7 +91,7 @@ class ZaloClient {
     } catch (error) {
       this.connected = false;
       this.phoneNumber = null;
-      throw new Error(`Zalo QR login failed: ${error.message}`);
+      throw new Error("Zalo QR login failed");
     }
   }
 
@@ -132,7 +132,7 @@ class ZaloClient {
         phone,
       };
     } catch (error) {
-      throw new Error(`Failed to send message: ${error.message}`);
+      throw new Error("Failed to send message");
     }
   }
 

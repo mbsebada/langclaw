@@ -51,13 +51,13 @@ def build_tool_permission_middleware(
             user_role = config.default_role
 
         role_cfg = config.roles.get(user_role)
-        if role_cfg is None or "*" in role_cfg.tools:
+        if role_cfg is not None and "*" in role_cfg.tools:
             logger.debug(
                 f"Permissions: role={user_role} allowed all tools for this call",
             )
             return await handler(request)
 
-        allowed = set(role_cfg.tools)
+        allowed = set(role_cfg.tools) if role_cfg is not None else set()
         filtered = [t for t in request.tools if t.name in allowed]
         logger.debug(
             f"Permissions: role={user_role} allowed tools {allowed} for this call",

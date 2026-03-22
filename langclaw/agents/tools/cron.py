@@ -178,10 +178,8 @@ def make_cron_tool(cron_manager: CronManager, timezone: str = "UTC") -> BaseTool
                     agent_name=agent_name,
                 )
             except Exception as exc:
-                import traceback
-
-                logger.error(f"cron add failed: {exc}\n{traceback.format_exc()}")
-                return f"Error scheduling job: {exc}"
+                logger.error(f"cron add failed: {exc}", exc_info=True)
+                return "Error scheduling job. Check logs for details."
 
             schedule_desc = (
                 f"every {every_seconds}s" if every_seconds is not None else f'cron "{cron_expr}"'

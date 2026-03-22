@@ -68,7 +68,16 @@ class ContentFilterMiddleware(AgentMiddleware):
         if human_msg is None:
             return None
 
-        content = human_msg.content.lower() if isinstance(human_msg.content, str) else ""
+        raw_content = human_msg.content
+        if isinstance(raw_content, str):
+            content = raw_content.lower()
+        elif isinstance(raw_content, list):
+            content = " ".join(
+                block.get("text", "") if isinstance(block, dict) else str(block)
+                for block in raw_content
+            ).lower()
+        else:
+            content = ""
 
         # Keyword check
         if any(kw in content for kw in self._keywords):
