@@ -1,0 +1,4 @@
+## 2024-05-24 - [CRITICAL] Internal Microservice Authentication Gap
+**Vulnerability:** The Zalo node.js wrapper service was completely unauthenticated and accessible. While it might be intended to run on a private network, internal microservices handling sensitive user messaging and authentication must still require verification to prevent SSRF and internal lateral movement exploits. Additionally, a hardcoded phone number PII was exposed in the main API proxy instead of utilizing an environment variable.
+**Learning:** Even internal sidecars/services need basic authentication, especially if they handle messaging functionality (acting on behalf of users).
+**Prevention:** Use a shared secret (API key via headers like `x-api-key`) injected via environment variables between the caller (Python proxy) and the receiver (Node.js service). Do not commit hardcoded phone numbers or any PII in the source code; prefer using fallbacks or environment variables for overrides.

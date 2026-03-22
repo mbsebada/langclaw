@@ -15,6 +15,23 @@ const PORT = process.env.ZALO_SERVICE_PORT || 8001;
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
+// Security Middleware: API Key Authentication
+const ZALO_SERVICE_API_KEY = process.env.ZALO_SERVICE_API_KEY;
+if (ZALO_SERVICE_API_KEY) {
+  app.use((req, res, next) => {
+    // Exempt health check from authentication
+    if (req.path === '/health') return next();
+
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey || apiKey !== ZALO_SERVICE_API_KEY) {
+      return res.status(401).json({ error: "Unauthorized: Invalid or missing API key" });
+    }
+    next();
+  });
+} else {
+  console.warn("WARNING: ZALO_SERVICE_API_KEY is not set. Service is running without authentication.");
+}
+
 // Health check
 app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "zalo-service" });
