@@ -20,6 +20,22 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "zalo-service" });
 });
 
+// Authentication Middleware
+const API_KEY = process.env.ZALO_SERVICE_API_KEY;
+
+if (API_KEY) {
+  app.use((req, res, next) => {
+    // Exclude health check from auth
+    if (req.path === "/health") return next();
+
+    const apiKey = req.headers["x-api-key"];
+    if (!apiKey || apiKey !== API_KEY) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    next();
+  });
+}
+
 // Routes
 app.use("/auth", authRouter);
 app.use("/message", messageRouter);
