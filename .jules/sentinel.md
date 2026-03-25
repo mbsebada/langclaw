@@ -1,0 +1,4 @@
+## 2025-02-14 - Removed hardcoded phone number in Zalo API integration
+**Vulnerability:** A hardcoded phone number ("0334663383") was being used directly in the `send_outreach_message` logic instead of the actual landlord's phone number extracted from the listing. This could lead to sensitive test information leaking, messaging an unintended party in production, or acting as an exploitable misconfiguration preventing correct outreach operation.
+**Learning:** Development test overrides, such as hardcoding numbers for a quick test, sometimes get committed. They pose logic/security risks in production. Using environment variables correctly separates configuration from code.
+**Prevention:** Always use environment variables (e.g., `ZALO_PHONE_OVERRIDE`) for temporary overrides and fallback to correct domain logic (e.g., using the extracted landlord `phone`). Avoid hardcoding personal identifiers or testing values in committed code.
