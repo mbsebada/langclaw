@@ -26,6 +26,7 @@ from examples.rentagent_vn.outreach import draft_outreach_message
 router = APIRouter(prefix="/api/v1", tags=["zalo"])
 
 ZALO_SERVICE_URL = os.environ.get("ZALO_SERVICE_URL", "http://localhost:8001")
+ZALO_SERVICE_API_KEY = os.environ.get("ZALO_SERVICE_API_KEY")
 
 
 # ---------------------------------------------------------------------------
@@ -40,12 +41,16 @@ async def _proxy_to_zalo(
 ) -> dict[str, Any]:
     """Proxy a request to the Zalo Node.js service."""
     url = f"{ZALO_SERVICE_URL}{path}"
+    headers = {}
+    if ZALO_SERVICE_API_KEY:
+        headers["x-api-key"] = ZALO_SERVICE_API_KEY
+
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             if method == "GET":
-                resp = await client.get(url)
+                resp = await client.get(url, headers=headers)
             elif method == "POST":
-                resp = await client.post(url, json=json_body)
+                resp = await client.post(url, json=json_body, headers=headers)
             else:
                 raise ValueError(f"Unsupported method: {method}")
 
@@ -200,8 +205,12 @@ async def send_outreach_message(
 
     # Send message via Zalo
     try:
-        # TODO: remove hardcode phone
-        phone = "0334663383"
+        # Use override phone number if provided, else use the landlord's phone
+        override_phone = os.environ.get("ZALO_PHONE_OVERRIDE")
+        if override_phone:
+            logger.info(f"Using ZALO_PHONE_OVERRIDE phone number: {override_phone}")
+            phone = override_phone
+
         send_result = await _proxy_to_zalo(
             "POST",
             "/message/send",
