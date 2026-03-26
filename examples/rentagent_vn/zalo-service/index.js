@@ -20,6 +20,22 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "zalo-service" });
 });
 
+// Authentication middleware for API routes
+app.use((req, res, next) => {
+  const apiKey = req.headers["x-api-key"];
+  const expectedKey = process.env.ZALO_SERVICE_API_KEY;
+
+  if (!expectedKey) {
+    console.warn("[Zalo Service] ZALO_SERVICE_API_KEY is not configured.");
+  }
+
+  if (!apiKey || apiKey !== expectedKey) {
+    return res.status(401).json({ error: "Unauthorized: Invalid or missing API key" });
+  }
+
+  next();
+});
+
 // Routes
 app.use("/auth", authRouter);
 app.use("/message", messageRouter);
