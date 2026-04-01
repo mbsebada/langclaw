@@ -1,0 +1,4 @@
+## 2025-04-01 - Missing Service Authentication and Hardcoded Information
+**Vulnerability:** A Node.js Zalo proxy service (`zalo-service`) had no authentication on its endpoints and the FastAPI backend (`api/routes/zalo.py`) had a hardcoded phone number for sending messages.
+**Learning:** Development-focused proxy services can easily become security holes if authentication is left out for convenience. Hardcoded PII like phone numbers during testing can be accidentally committed and used in production, leading to data leaks or sending accidental messages to unintended parties.
+**Prevention:** Use an API Key or token (e.g., `ZALO_SERVICE_API_KEY` middleware in the node server) right from the start to protect internal/proxy services. Utilize environment variables (e.g., `ZALO_PHONE_OVERRIDE`) for temporary overrides or testing rather than hardcoding PII directly in the application code.

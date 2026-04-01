@@ -15,6 +15,27 @@ const PORT = process.env.ZALO_SERVICE_PORT || 8001;
 app.use(cors({ origin: [`http://localhost:${PORT}`, "http://localhost:3000", "http://127.0.0.1:3000"] }));
 app.use(express.json({ limit: "10mb" }));
 
+// Authentication middleware
+app.use((req, res, next) => {
+  // Skip auth for health check
+  if (req.path === "/health") {
+    return next();
+  }
+
+  const expectedApiKey = process.env.ZALO_SERVICE_API_KEY;
+  if (!expectedApiKey) {
+    console.error("[Zalo Service] CRITICAL: ZALO_SERVICE_API_KEY environment variable is not configured.");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+
+  const providedApiKey = req.headers["x-api-key"];
+  if (!providedApiKey || providedApiKey !== expectedApiKey) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  next();
+});
+
 // Health check
 app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "zalo-service" });
