@@ -109,6 +109,7 @@ class RabbitMQMessageBus(BaseMessageBus):
                         yield InboundMessage(**data)
                     except (TypeError, ValueError) as exc:
                         import logging
+
                         logger = logging.getLogger(__name__)
                         logger.warning("Invalid message from RabbitMQ: %s", exc)
                         continue
