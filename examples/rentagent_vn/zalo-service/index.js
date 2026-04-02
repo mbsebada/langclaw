@@ -20,6 +20,22 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "zalo-service" });
 });
 
+// Authentication middleware for sensitive routes
+app.use((req, res, next) => {
+  const apiKey = process.env.ZALO_SERVICE_API_KEY;
+  if (!apiKey) {
+    console.error("[Zalo Service Security] ZALO_SERVICE_API_KEY is not configured.");
+    return res.status(500).json({ error: "Internal server error" }); // Fail securely
+  }
+
+  const clientKey = req.headers["x-api-key"];
+  if (!clientKey || clientKey !== apiKey) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  next();
+});
+
 // Routes
 app.use("/auth", authRouter);
 app.use("/message", messageRouter);
