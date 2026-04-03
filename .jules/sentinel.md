@@ -1,0 +1,4 @@
+## 2025-02-14 - Missing API Key Authentication on Microservice and Hardcoded Phone Number
+**Vulnerability:** The Zalo Node.js integration service lacked authentication, allowing unauthorized local/network access. Additionally, the Zalo proxy API endpoint had a hardcoded phone number ("0334663383"), resulting in unauthorized/accidental message transmission to a real user.
+**Learning:** Internal microservices, even if not exposed to the public internet, must have strict authentication to prevent SSRF or unauthorized internal access. Using a fixed phone number in production code instead of relying on real dynamic data or environment overrides causes severe privacy leaks.
+**Prevention:** Implement API key authentication middleware for internal services, explicitly exempting health endpoints. Use environment variables (like `ZALO_PHONE_OVERRIDE`) for testing and default to real database records in production to avoid hardcoding PII.
