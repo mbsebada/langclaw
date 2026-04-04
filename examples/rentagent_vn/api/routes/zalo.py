@@ -40,12 +40,17 @@ async def _proxy_to_zalo(
 ) -> dict[str, Any]:
     """Proxy a request to the Zalo Node.js service."""
     url = f"{ZALO_SERVICE_URL}{path}"
+
+    # We require an API key to communicate with the Zalo service
+    api_key = os.environ.get("ZALO_SERVICE_API_KEY", "")
+    headers = {"x-api-key": api_key} if api_key else {}
+
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             if method == "GET":
-                resp = await client.get(url)
+                resp = await client.get(url, headers=headers)
             elif method == "POST":
-                resp = await client.post(url, json=json_body)
+                resp = await client.post(url, json=json_body, headers=headers)
             else:
                 raise ValueError(f"Unsupported method: {method}")
 
@@ -200,8 +205,8 @@ async def send_outreach_message(
 
     # Send message via Zalo
     try:
-        # TODO: remove hardcode phone
-        phone = "0334663383"
+        # Allow overriding the destination phone number for testing
+        phone = os.environ.get("ZALO_PHONE_OVERRIDE", phone)
         send_result = await _proxy_to_zalo(
             "POST",
             "/message/send",
