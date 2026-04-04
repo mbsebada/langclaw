@@ -1,0 +1,4 @@
+## 2025-04-04 - [Missing Authentication & Hardcoded PII in Zalo Proxy]
+**Vulnerability:** The Node.js Zalo proxy service (`examples/rentagent_vn/zalo-service/`) lacked API key authentication, exposing sensitive endpoints like `/auth` and `/message` to anyone who could access the service port. Additionally, a hardcoded phone number ("0334663383") was used in `examples/rentagent_vn/api/routes/zalo.py` for sending outreach messages.
+**Learning:** Development environments often leave proxy or integration services open by default for convenience, and hardcode test data. These bad practices can easily leak into production environments if not secured early.
+**Prevention:** Always require authentication on proxy services using simple mechanisms like API keys (e.g. `x-api-key` header). Use environment variables (e.g. `ZALO_PHONE_OVERRIDE`) instead of hardcoding sensitive PII or test numbers in the codebase.
