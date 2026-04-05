@@ -40,8 +40,10 @@ async def _proxy_to_zalo(
 ) -> dict[str, Any]:
     """Proxy a request to the Zalo Node.js service."""
     url = f"{ZALO_SERVICE_URL}{path}"
+    api_key = os.environ.get("ZALO_SERVICE_API_KEY", "")
+    headers = {"x-api-key": api_key}
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=30.0, headers=headers) as client:
             if method == "GET":
                 resp = await client.get(url)
             elif method == "POST":
@@ -200,8 +202,7 @@ async def send_outreach_message(
 
     # Send message via Zalo
     try:
-        # TODO: remove hardcode phone
-        phone = "0334663383"
+        phone = os.environ.get("ZALO_PHONE_OVERRIDE", phone)
         send_result = await _proxy_to_zalo(
             "POST",
             "/message/send",
