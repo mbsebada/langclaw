@@ -1,0 +1,4 @@
+## 2024-04-06 - [CRITICAL] Missing Service Authentication and Hardcoded PII
+**Vulnerability:** The Zalo Node.js integration service lacked authentication, allowing any internal network service to proxy requests. Additionally, a hardcoded phone number ("0334663383") was present in the API proxy.
+**Learning:** Service-to-service communication requires explicit authentication via API keys or mTLS to prevent unauthorized access even within trusted networks. Hardcoded PII represents a significant leakage risk, especially in production environments where test numbers are left active.
+**Prevention:** Always implement shared secret validation (e.g., via `x-api-key`) between microservices and use environment variables with sensible defaults for sensitive testing parameters (like `ZALO_PHONE_OVERRIDE`).
