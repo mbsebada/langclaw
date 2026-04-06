@@ -121,6 +121,7 @@ def _get_transient_errors() -> tuple[type[Exception], ...]:
     """Return a tuple of transient Telegram error types suitable for retry."""
     try:
         from telegram.error import NetworkError, TimedOut
+
         return (TimedOut, NetworkError)
     except ImportError:
         return (Exception,)
