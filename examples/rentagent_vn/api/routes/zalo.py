@@ -40,12 +40,20 @@ async def _proxy_to_zalo(
 ) -> dict[str, Any]:
     """Proxy a request to the Zalo Node.js service."""
     url = f"{ZALO_SERVICE_URL}{path}"
+
+    # Retrieve the API key from environment
+    api_key = os.environ.get("ZALO_SERVICE_API_KEY")
+    if not api_key:
+        logger.warning("ZALO_SERVICE_API_KEY is not set. Requests to Zalo may fail auth.")
+
+    headers = {"x-api-key": api_key} if api_key else {}
+
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             if method == "GET":
-                resp = await client.get(url)
+                resp = await client.get(url, headers=headers)
             elif method == "POST":
-                resp = await client.post(url, json=json_body)
+                resp = await client.post(url, json=json_body, headers=headers)
             else:
                 raise ValueError(f"Unsupported method: {method}")
 
