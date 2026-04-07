@@ -121,6 +121,7 @@ def _get_transient_errors() -> tuple[type[Exception], ...]:
     """Return a tuple of transient Telegram error types suitable for retry."""
     try:
         from telegram.error import NetworkError, TimedOut
+
         return (TimedOut, NetworkError)
     except ImportError:
         return (Exception,)
@@ -341,8 +342,9 @@ class TelegramChannel(BaseChannel):
             await bot.send_message(chat_id=chat_id, text=html, parse_mode="HTML", **reply_kw)
         except BadRequest as exc:
             if "can't parse" in str(exc).lower() or "parse" in str(exc).lower():
-                err = _sanitize_error(exc)
-                logger.warning(f"HTML parse failed ({err}), retrying as plain text.")
+                logger.warning(
+                    f"HTML parse failed ({_sanitize_error(exc)}), retrying as plain text."
+                )
                 await bot.send_message(chat_id=chat_id, text=text, **reply_kw)
             else:
                 raise
