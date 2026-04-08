@@ -1,0 +1,4 @@
+## 2024-11-22 - [Failing Securely] Missing Authentication Configuration
+**Vulnerability:** Internal Zalo proxy service endpoints were unauthenticated because `ZALO_SERVICE_API_KEY` was missing from validation logic and nodejs Zalo service.
+**Learning:** Failing securely is important. When adding an authentication token checking system that depends on an environment variable, if that environment variable isn't configured, the system must NOT fall back to treating requests as authorized. It must securely reject them and log a configuration error to prevent unauthorized access.
+**Prevention:** Always check that both the provided token and the expected configured token exist and are not empty before comparing them. If the expected token is missing from the environment, throw an error or return a 500 status rather than allowing the check to pass.

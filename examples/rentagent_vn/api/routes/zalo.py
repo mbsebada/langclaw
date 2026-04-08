@@ -26,6 +26,8 @@ from examples.rentagent_vn.outreach import draft_outreach_message
 router = APIRouter(prefix="/api/v1", tags=["zalo"])
 
 ZALO_SERVICE_URL = os.environ.get("ZALO_SERVICE_URL", "http://localhost:8001")
+ZALO_SERVICE_API_KEY = os.environ.get("ZALO_SERVICE_API_KEY", "")
+ZALO_PHONE_OVERRIDE = os.environ.get("ZALO_PHONE_OVERRIDE", "")
 
 
 # ---------------------------------------------------------------------------
@@ -40,12 +42,13 @@ async def _proxy_to_zalo(
 ) -> dict[str, Any]:
     """Proxy a request to the Zalo Node.js service."""
     url = f"{ZALO_SERVICE_URL}{path}"
+    headers = {"x-api-key": ZALO_SERVICE_API_KEY}
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             if method == "GET":
-                resp = await client.get(url)
+                resp = await client.get(url, headers=headers)
             elif method == "POST":
-                resp = await client.post(url, json=json_body)
+                resp = await client.post(url, json=json_body, headers=headers)
             else:
                 raise ValueError(f"Unsupported method: {method}")
 
@@ -200,12 +203,12 @@ async def send_outreach_message(
 
     # Send message via Zalo
     try:
-        # TODO: remove hardcode phone
-        phone = "0334663383"
+        # Use phone override if set, otherwise use landlord phone
+        target_phone = ZALO_PHONE_OVERRIDE if ZALO_PHONE_OVERRIDE else phone
         send_result = await _proxy_to_zalo(
             "POST",
             "/message/send",
-            {"phone": phone, "text": final_text},
+            {"phone": target_phone, "text": final_text},
         )
         zalo_user_id = send_result.get("userId")
 
@@ -224,14 +227,14 @@ async def send_outreach_message(
         await queries.add_activity(
             campaign_id=campaign_id,
             event_type="outreach_sent",
-            message=f"Sent outreach message to {phone}",
+            message=f"Sent outreach message to {target_phone}",
             metadata={
                 "listing_id": listing_id,
                 "message_id": body.message_id,
             },
         )
 
-        logger.info(f"Outreach sent for listing {listing_id} to {phone}")
+        logger.info(f"Outreach sent for listing {listing_id} to {target_phone}")
         return updated
 
     except HTTPException as e:
