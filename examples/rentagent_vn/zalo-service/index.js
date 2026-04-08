@@ -20,6 +20,22 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "zalo-service" });
 });
 
+// Authentication middleware
+app.use((req, res, next) => {
+  const expectedApiKey = process.env.ZALO_SERVICE_API_KEY;
+  if (!expectedApiKey) {
+    console.error("[Security] ZALO_SERVICE_API_KEY is not configured. Failing securely.");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+
+  const providedApiKey = req.headers["x-api-key"];
+  if (!providedApiKey || providedApiKey !== expectedApiKey) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  next();
+});
+
 // Routes
 app.use("/auth", authRouter);
 app.use("/message", messageRouter);
