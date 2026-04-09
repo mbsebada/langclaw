@@ -1,0 +1,4 @@
+## 2024-05-24 - [Fix Zalo Service Missing Authentication and Hardcoded Phone]
+**Vulnerability:** The Zalo proxy service endpoints (`examples/rentagent_vn/zalo-service/`) were completely unauthenticated. Additionally, `examples/rentagent_vn/api/routes/zalo.py` hardcoded a testing phone number.
+**Learning:** Microservices (like the Node.js Zalo integration) designed to operate alongside internal components need explicit authentication (e.g. API keys) as defense-in-depth, especially when they execute sensitive actions like sending out communications. Hardcoded testing variables risk PII leakage and accidental spam.
+**Prevention:** Always secure internal inter-service communication paths using an API Key or equivalent validation mechanisms. Utilize environment variables (e.g., `ZALO_PHONE_OVERRIDE`) for temporary routing or testing instead of directly committing hardcoded endpoints.

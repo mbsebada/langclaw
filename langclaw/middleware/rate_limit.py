@@ -59,7 +59,7 @@ class RateLimitMiddleware(AgentMiddleware):
         _MAX_BUCKETS = 10_000
         if len(self._buckets) > _MAX_BUCKETS:
             sorted_keys = sorted(self._buckets, key=lambda k: self._buckets[k].last_refill)
-            for k in sorted_keys[:len(self._buckets) - _MAX_BUCKETS]:
+            for k in sorted_keys[: len(self._buckets) - _MAX_BUCKETS]:
                 del self._buckets[k]
 
         if bucket.tokens >= 1.0:
