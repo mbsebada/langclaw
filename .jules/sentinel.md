@@ -1,0 +1,4 @@
+## 2025-02-14 - Fix missing authentication on Zalo service
+**Vulnerability:** The Node.js Zalo microservice lacked authentication, allowing unauthorized access to endpoints, and the API key verification on backend lacked protection against timing attacks. Furthermore, a hardcoded phone number was found, which could lead to sending messages to an unintended phone number.
+**Learning:** Microservices must authenticate internal requests, and cryptographic operations like API key comparison require constant-time algorithms (e.g., `crypto.timingSafeEqual` with `Buffer`) to prevent timing side-channel attacks. Hardcoding phone numbers should be avoided to prevent accidental PII leakage or messages.
+**Prevention:** Require `x-api-key` validation with timing attack resistance using `crypto.timingSafeEqual` for internal proxy endpoints. Use environment variables (like `ZALO_PHONE_OVERRIDE`) instead of hardcoding sensitive data like phone numbers.
