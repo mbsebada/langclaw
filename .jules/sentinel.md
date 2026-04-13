@@ -1,0 +1,4 @@
+## 2025-02-14 - Missing API Key Authentication on Zalo Proxy
+**Vulnerability:** The Node.js Zalo proxy service lacked authentication on its endpoints, allowing arbitrary internal/external requests without a key, which also led to hardcoded phone numbers being used in proxy requests to prevent spam.
+**Learning:** Internal microservices and proxies (like Express wrapping a Zalo integration) must have their own secure authentication layer (e.g. `x-api-key` using `crypto.timingSafeEqual`) to prevent unauthorized usage and ensure environment variables configuration is properly enforced before processing requests.
+**Prevention:** Always implement service-to-service authentication for internal proxy components, explicitly fetch and validate API keys, fail securely if unconfigured, and remove hardcoded credentials or phone numbers in favor of explicit configuration.
