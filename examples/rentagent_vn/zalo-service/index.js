@@ -5,11 +5,39 @@
 
 import express from "express";
 import cors from "cors";
+import crypto from "crypto";
 import authRouter from "./routes/auth.js";
 import messageRouter from "./routes/message.js";
 
 const app = express();
 const PORT = process.env.ZALO_SERVICE_PORT || 8001;
+
+// Authentication middleware
+const authMiddleware = (req, res, next) => {
+  if (req.path === "/health") {
+    return next();
+  }
+
+  const expectedKey = process.env.ZALO_SERVICE_API_KEY;
+  if (!expectedKey) {
+    console.error("[Zalo Service Error] ZALO_SERVICE_API_KEY environment variable is not configured.");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+
+  const providedKey = req.headers["x-api-key"];
+  if (!providedKey) {
+    return res.status(401).json({ error: "Unauthorized: Missing x-api-key header" });
+  }
+
+  const expectedBuf = Buffer.from(expectedKey, "utf8");
+  const providedBuf = Buffer.from(providedKey, "utf8");
+
+  if (expectedBuf.length !== providedBuf.length || !crypto.timingSafeEqual(expectedBuf, providedBuf)) {
+    return res.status(401).json({ error: "Unauthorized: Invalid API key" });
+  }
+
+  next();
+};
 
 // Middleware — restrict CORS to localhost origins only
 app.use(cors({ origin: [`http://localhost:${PORT}`, "http://localhost:3000", "http://127.0.0.1:3000"] }));
@@ -19,6 +47,9 @@ app.use(express.json({ limit: "10mb" }));
 app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "zalo-service" });
 });
+
+// Apply authentication
+app.use(authMiddleware);
 
 // Routes
 app.use("/auth", authRouter);
