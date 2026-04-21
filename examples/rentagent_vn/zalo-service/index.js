@@ -5,6 +5,7 @@
 
 import express from "express";
 import cors from "cors";
+import crypto from "crypto";
 import authRouter from "./routes/auth.js";
 import messageRouter from "./routes/message.js";
 
@@ -18,6 +19,30 @@ app.use(express.json({ limit: "10mb" }));
 // Health check
 app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "zalo-service" });
+});
+
+// API Key Authentication Middleware
+app.use((req, res, next) => {
+  const envKey = process.env.ZALO_SERVICE_API_KEY;
+  if (!envKey) {
+    console.error("[Zalo Service Security] ZALO_SERVICE_API_KEY is not set.");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+
+  const providedKey = req.headers["x-api-key"];
+  if (!providedKey) {
+    return res.status(401).json({ error: "Unauthorized: Missing API key" });
+  }
+
+  const expectedBuf = Buffer.from(envKey);
+  const providedBuf = Buffer.from(providedKey);
+
+  // Compare lengths first to avoid throwing error in timingSafeEqual
+  if (expectedBuf.length !== providedBuf.length || !crypto.timingSafeEqual(expectedBuf, providedBuf)) {
+    return res.status(401).json({ error: "Unauthorized: Invalid API key" });
+  }
+
+  next();
 });
 
 // Routes
