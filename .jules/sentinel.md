@@ -1,0 +1,4 @@
+## 2024-04-22 - Fix missing authentication in Zalo Service and hardcoded PII
+**Vulnerability:** The Node.js Zalo proxy service lacked authentication for its API endpoints. Additionally, a hardcoded phone number in the Python proxy route (`0334663383`) could leak PII or lead to accidental testing messages.
+**Learning:** Node.js services require explicit API key verification to prevent unauthorized access. When verifying API keys, it is critical to use `crypto.timingSafeEqual` with `Buffer` objects, ensuring buffer length checks are performed *first* to avoid timing attacks and crypto errors. Also, rely on environment variables (`ZALO_PHONE_OVERRIDE`) for testing overrides instead of hardcoding sensitive data.
+**Prevention:** Always require an `x-api-key` header (or similar mechanism) in internal services, use constant-time string comparison for secrets, and enforce environment-based overrides for external communication testing.
