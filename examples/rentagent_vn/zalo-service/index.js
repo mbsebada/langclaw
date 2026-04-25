@@ -7,6 +7,7 @@ import express from "express";
 import cors from "cors";
 import authRouter from "./routes/auth.js";
 import messageRouter from "./routes/message.js";
+import { apiKeyAuth } from "./middleware/auth.js";
 
 const app = express();
 const PORT = process.env.ZALO_SERVICE_PORT || 8001;
@@ -20,9 +21,9 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "zalo-service" });
 });
 
-// Routes
-app.use("/auth", authRouter);
-app.use("/message", messageRouter);
+// Routes - protected by API key
+app.use("/auth", apiKeyAuth, authRouter);
+app.use("/message", apiKeyAuth, messageRouter);
 
 // Error handling middleware — don't leak internal details to clients
 app.use((err, req, res, next) => {
