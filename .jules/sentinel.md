@@ -1,0 +1,4 @@
+## 2024-04-26 - [CRITICAL] Internal Zalo Microservice Missing Authentication
+**Vulnerability:** The internal Zalo Node.js service (`zalo-service`) was running on a port (8001) without authentication. Even though it was intended to only be accessible via the FastAPI proxy, internal network exposure and SSRF vulnerabilities could allow unauthorized requests to the Zalo microservice.
+**Learning:** Internal microservices exposed to the local network must enforce their own authentication (like validating API keys via middleware) even if they are intended for access via an internal proxy, to prevent unauthorized access via SSRF or direct port requests.
+**Prevention:** Implement API key validation middleware on internal microservices. Use `crypto.timingSafeEqual` with `Buffer` objects in Node.js, ensuring length checks are performed prior to comparison to prevent exceptions and timing attacks.
