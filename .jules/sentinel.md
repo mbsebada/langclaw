@@ -1,0 +1,4 @@
+## 2025-04-27 - [CRITICAL] Fix Unauthenticated internal microservice (SSRF risk)
+**Vulnerability:** The internal Zalo Node.js microservice (`examples/rentagent_vn/zalo-service/`) had no authentication mechanism, exposing it to Server-Side Request Forgery (SSRF) and unauthorized direct access from other containers/services on the local network.
+**Learning:** Internal microservices exposed to the local network must enforce their own authentication, even if they are only intended for access via an internal proxy or are strictly internal. Relying solely on network boundaries is insufficient defense in depth.
+**Prevention:** Always implement API key validation using timing-safe comparisons (`crypto.timingSafeEqual`) on internal service endpoints, and ensure proper propagation of the key from proxy to service via environment variables. Ensure new configurations are added to `.env.example`.
