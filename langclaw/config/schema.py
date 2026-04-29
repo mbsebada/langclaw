@@ -372,6 +372,7 @@ def _load_json_defaults() -> dict[str, Any]:
             return json.loads(_CONFIG_PATH.read_text())
         except Exception as exc:
             import logging
+
             logging.getLogger(__name__).warning("Failed to parse %s: %s", _CONFIG_PATH, exc)
             return {}
     return {}
@@ -465,5 +466,6 @@ def save_default_config() -> Path:
     default = LangclawConfig()
     _CONFIG_PATH.write_text(default.model_dump_json(indent=2, exclude_none=False))
     import os
+
     os.chmod(_CONFIG_PATH, 0o600)
     return _CONFIG_PATH
