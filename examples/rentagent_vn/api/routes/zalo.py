@@ -26,6 +26,7 @@ from examples.rentagent_vn.outreach import draft_outreach_message
 router = APIRouter(prefix="/api/v1", tags=["zalo"])
 
 ZALO_SERVICE_URL = os.environ.get("ZALO_SERVICE_URL", "http://localhost:8001")
+ZALO_SERVICE_API_KEY = os.environ.get("ZALO_SERVICE_API_KEY")
 
 
 # ---------------------------------------------------------------------------
@@ -40,8 +41,12 @@ async def _proxy_to_zalo(
 ) -> dict[str, Any]:
     """Proxy a request to the Zalo Node.js service."""
     url = f"{ZALO_SERVICE_URL}{path}"
+    headers = {}
+    if ZALO_SERVICE_API_KEY:
+        headers["x-api-key"] = ZALO_SERVICE_API_KEY
+
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=30.0, headers=headers) as client:
             if method == "GET":
                 resp = await client.get(url)
             elif method == "POST":
@@ -200,8 +205,7 @@ async def send_outreach_message(
 
     # Send message via Zalo
     try:
-        # TODO: remove hardcode phone
-        phone = "0334663383"
+        phone = os.environ.get("ZALO_PHONE_OVERRIDE") or listing.get("landlord_phone")
         send_result = await _proxy_to_zalo(
             "POST",
             "/message/send",

@@ -5,6 +5,7 @@
 
 import express from "express";
 import cors from "cors";
+import crypto from "crypto";
 import authRouter from "./routes/auth.js";
 import messageRouter from "./routes/message.js";
 
@@ -14,6 +15,35 @@ const PORT = process.env.ZALO_SERVICE_PORT || 8001;
 // Middleware — restrict CORS to localhost origins only
 app.use(cors({ origin: [`http://localhost:${PORT}`, "http://localhost:3000", "http://127.0.0.1:3000"] }));
 app.use(express.json({ limit: "10mb" }));
+
+// Security: Enforce API Key Authentication
+const EXPECTED_API_KEY = process.env.ZALO_SERVICE_API_KEY;
+
+app.use((req, res, next) => {
+  if (req.path === "/health") {
+    return next();
+  }
+
+  if (!EXPECTED_API_KEY) {
+    console.warn("⚠️ WARNING: ZALO_SERVICE_API_KEY is not set. Service is running WITHOUT authentication. This is insecure for production!");
+    return next();
+  }
+
+  const providedKey = req.headers["x-api-key"];
+
+  if (!providedKey || typeof providedKey !== "string") {
+    return res.status(401).json({ error: "Unauthorized: Missing API Key" });
+  }
+
+  const expectedBuf = Buffer.from(EXPECTED_API_KEY);
+  const providedBuf = Buffer.from(providedKey);
+
+  if (expectedBuf.length !== providedBuf.length || !crypto.timingSafeEqual(expectedBuf, providedBuf)) {
+    return res.status(401).json({ error: "Unauthorized: Invalid API Key" });
+  }
+
+  next();
+});
 
 // Health check
 app.get("/health", (req, res) => {
