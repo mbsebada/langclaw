@@ -1,0 +1,4 @@
+## 2025-03-08 - [Missing Service Auth & Hardcoded Test Data]
+**Vulnerability:** Internal Node.js Zalo proxy service lacked authentication, allowing unauthenticated internal network requests, and the Python client contained a hardcoded test phone number that overrode actual data.
+**Learning:** Internal microservices exposed on the local network still need authentication (like an `x-api-key`) to prevent SSRF or direct port access. Additionally, hardcoded test data left in source code creates friction and data integrity risks; it should always be managed via environment overrides (e.g., `ZALO_PHONE_OVERRIDE`).
+**Prevention:** Always enforce API key verification using `crypto.timingSafeEqual` for internal proxy services and implement safe fallback logic using environment overrides instead of hardcoded strings in production codebases.
