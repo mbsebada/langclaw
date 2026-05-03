@@ -1,0 +1,4 @@
+## 2025-05-03 - [Missing Authentication on Internal Zalo Microservice]
+**Vulnerability:** The internal Zalo Node.js microservice (`examples/rentagent_vn/zalo-service/index.js`) lacked any authentication mechanisms, relying solely on network segregation or a proxy frontend.
+**Learning:** Even internal microservices that are intended only to be accessed via a proxy need to enforce their own authentication (e.g., via API keys and middleware). This prevents unauthorized access via Server-Side Request Forgery (SSRF) from other vulnerable services or direct port access if network bounds are misconfigured.
+**Prevention:** Always implement service-to-service authentication (such as `x-api-key` validation using timing-safe comparisons) for internal microservices, enforcing Defense in Depth principles.
