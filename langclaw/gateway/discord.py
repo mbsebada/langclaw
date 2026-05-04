@@ -112,12 +112,13 @@ class DiscordChannel(BaseChannel):
 
         @client.event
         async def on_message(message: discord.Message) -> None:
+            # SECURITY: Do not log message.content to avoid exposing sensitive data
             logger.debug(
-                "Discord raw event: author=%s bot=%s channel=%s content=%r",
+                "Discord raw event: author=%s bot=%s channel=%s content_length=%r",
                 message.author,
                 message.author.bot,
                 message.channel.id,
-                message.content[:80] if message.content else "",
+                len(message.content) if message.content else 0,
             )
             if message.author.bot:
                 return
@@ -322,11 +323,12 @@ class DiscordChannel(BaseChannel):
         content = message.content or ""
 
         if not sender_id or not channel_id:
+            # SECURITY: Do not log message.content to avoid exposing sensitive data
             logger.debug(
                 f"Discord message dropped: author={message.author} "
                 f"bot={message.author.bot} "
                 f"channel={message.channel.id} "
-                f"content={message.content[:80] if message.content else ''}",
+                f"content_length={len(message.content) if message.content else 0}",
             )
             return
 
