@@ -5,15 +5,37 @@
 
 import express from "express";
 import cors from "cors";
+import crypto from "crypto";
 import authRouter from "./routes/auth.js";
 import messageRouter from "./routes/message.js";
 
 const app = express();
 const PORT = process.env.ZALO_SERVICE_PORT || 8001;
+const API_KEY = process.env.ZALO_SERVICE_API_KEY || "dev-zalo-key"; // Local fallback
 
 // Middleware — restrict CORS to localhost origins only
 app.use(cors({ origin: [`http://localhost:${PORT}`, "http://localhost:3000", "http://127.0.0.1:3000"] }));
 app.use(express.json({ limit: "10mb" }));
+
+// API Key Authentication Middleware
+app.use((req, res, next) => {
+  // Skip auth for healthcheck
+  if (req.path === "/health") return next();
+
+  const providedKey = req.headers["x-api-key"] || "";
+
+  // Use timing-safe equality check to prevent timing attacks
+  const expectedBuf = Buffer.from(API_KEY);
+  const providedBuf = Buffer.from(providedKey);
+
+  // Buffer.byteLength or checking buffer lengths before timingSafeEqual
+  if (providedBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(providedBuf, expectedBuf)) {
+    console.warn(`[Security] Unauthorized access attempt to ${req.path} from IP ${req.ip}`);
+    return res.status(401).json({ error: "Unauthorized: Invalid API Key" });
+  }
+
+  next();
+});
 
 // Health check
 app.get("/health", (req, res) => {
