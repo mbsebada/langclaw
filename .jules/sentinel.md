@@ -1,0 +1,4 @@
+## 2025-05-06 - Missing Authentication on Internal Zalo Microservice
+**Vulnerability:** The Zalo Express microservice (`examples/rentagent_vn/zalo-service/`) had no authentication mechanism to restrict access to its internal proxy endpoints.
+**Learning:** Even internal microservices designed to be accessed via an internal proxy in an application can be vulnerable if they do not enforce their own authentication. Without this, unauthorized users might access these services through Server-Side Request Forgery (SSRF) attacks or direct port access if network configurations aren't perfectly strict.
+**Prevention:** All internal microservices, regardless of intended access routing, must enforce independent authentication (e.g., verifying API keys via middleware using securely implemented `crypto.timingSafeEqual` with `Buffer`s) to establish defense in depth.
