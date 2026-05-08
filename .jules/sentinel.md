@@ -1,0 +1,4 @@
+## 2025-05-08 - [Missing Internal Microservice Authentication (SSRF Risk)]
+**Vulnerability:** The Zalo Node.js service exposed on `localhost:8001` did not have any authentication requirements for its API endpoints. Although it relied on a local deployment/CORS policy to restrict access, an SSRF vulnerability or access to the local machine could be leveraged to interact with the Zalo service arbitrarily and send unauthenticated messages.
+**Learning:** Internal microservices designed to be accessed purely by a proxy can still be susceptible to SSRF vulnerabilities if left unauthenticated. In Node.js services, `crypto.timingSafeEqual` with `Buffer` objects should be used to protect against timing attacks on string length/values when verifying API keys.
+**Prevention:** Always enforce strong authentication (e.g., API keys passed via headers or JWT) on internal microservices, and ensure API key checks utilize timing-safe comparison methods to thwart timing side channels.
