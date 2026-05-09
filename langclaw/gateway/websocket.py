@@ -61,9 +61,7 @@ class _Connection:
         """Return True if this message is within rate limits, False otherwise."""
         now = time.monotonic()
         # Purge timestamps outside the window
-        self._msg_timestamps = [
-            t for t in self._msg_timestamps if now - t < _RATE_LIMIT_WINDOW
-        ]
+        self._msg_timestamps = [t for t in self._msg_timestamps if now - t < _RATE_LIMIT_WINDOW]
         if len(self._msg_timestamps) >= _RATE_LIMIT_MAX:
             return False
         self._msg_timestamps.append(now)
