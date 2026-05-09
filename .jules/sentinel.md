@@ -1,0 +1,4 @@
+## 2025-05-09 - Missing Authentication in Internal Zalo Microservice
+**Vulnerability:** The internal Zalo Node.js microservice (`examples/rentagent_vn/zalo-service/`) lacked authentication because it assumed its local-network status (`localhost:8001`) provided sufficient protection.
+**Learning:** Internal services operating alongside public-facing endpoints must not rely purely on network segmentation. Without explicit authentication, they are vulnerable to SSRF attacks if an attacker compromises the proxy or finds another vector. Implementing basic API key authentication with timing-safe checks (`crypto.timingSafeEqual`) on `Buffer` objects prevents this bypass.
+**Prevention:** Always enforce explicit, service-to-service authentication (e.g., API keys, mTLS, JWTs) for internal microservices, even if they are only expected to be called via an internal proxy. Ensure timing-safe checks compare buffer lengths before values to prevent side-channel timing attacks.
