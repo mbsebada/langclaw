@@ -1,0 +1,4 @@
+## 2025-05-12 - Prevent SSRF in internal Zalo Node.js service via API Key Auth
+**Vulnerability:** The internal Zalo Node.js microservice (`examples/rentagent_vn/zalo-service`) was completely unauthenticated. Although bound to localhost, lack of authentication on local internal proxy microservices exposes them to Server-Side Request Forgery (SSRF) or unauthorized direct requests from other local processes.
+**Learning:** Never assume a service is secure just because it is internal or bound to localhost. Local microservices require their own authentication (like API keys) to prevent unauthorized internal requests. Additionally, when comparing API keys in Node.js, `crypto.timingSafeEqual` with `Buffer` length checking should be used to prevent timing attacks.
+**Prevention:** Always implement an internal authentication mechanism (such as an `x-api-key` header) for all internal microservices and proxy wrappers.

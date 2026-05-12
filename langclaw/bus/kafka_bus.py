@@ -100,5 +100,6 @@ class KafkaMessageBus(BaseMessageBus):
                 yield InboundMessage(**record.value)
             except (TypeError, ValueError) as exc:
                 import logging
+
                 logging.getLogger(__name__).warning("Invalid message from Kafka: %s", exc)
                 continue
